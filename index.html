@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Xếp lịch làm việc – Tiệm Pizza</title>
+<style>
+:root{--bg:#f5f3ef;--card:#fff;--ink:#1f2328;--muted:#6b7280;--line:#e4dfd7;--accent:#c2410c;--accent2:#9a3412;
+--AM:#ffffff;--PM:#d5dae1;--C:#3fd13f;--C1:#3ad7ea;--C2:#f7943a;--OFF:#fff23a;--err:#b91c1c;--warn:#b45309;--ok:#15803d}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:16px 20px;background:#1f2328;color:#fff}
+header h1{margin:0;font-size:19px;letter-spacing:.2px}
+header .sub{color:#c9ced6;font-size:12px}
+header label{font-size:13px;color:#e5e7eb}
+header input{margin-left:6px;padding:5px 8px;border-radius:6px;border:1px solid #555;background:#2b3037;color:#fff}
+#weekLabel{margin-left:10px;font-weight:600}
+.tabs{display:flex;gap:4px;padding:10px 20px 0;background:#1f2328;overflow-x:auto}
+.tabs button{border:0;background:transparent;color:#c9ced6;padding:10px 14px;border-radius:8px 8px 0 0;font-weight:600;cursor:pointer;white-space:nowrap;font-size:14px}
+.tabs button.on{background:var(--bg);color:var(--ink)}
+main{padding:16px 20px 40px;max-width:1400px;margin:0 auto}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.spacer{flex:1}
+button,.btn{font:inherit;cursor:pointer;border-radius:8px;padding:8px 14px;border:1px solid var(--line);background:#fff;color:var(--ink);font-weight:600;text-decoration:none;display:inline-block}
+button:hover,.btn:hover{filter:brightness(.96)}
+.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.accent{background:#1f2328;border-color:#1f2328;color:#fff}
+.ghost{background:#fff}
+.small{padding:5px 10px;font-size:12px}
+.hint{color:var(--muted);font-size:13px;margin:4px 0 12px;line-height:1.45}
+.tablewrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:860px}
+th,td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:6px;text-align:center;vertical-align:middle}
+th{background:#faf8f5;font-size:12px;font-weight:700;color:#374151;position:sticky;top:0}
+th small{display:block;font-weight:500;color:var(--muted)}
+td.name,th.name{text-align:left;position:sticky;left:0;background:#fff;z-index:1;min-width:190px}
+th.name{background:#faf8f5;z-index:2}
+.sk{margin-top:3px;display:flex;flex-wrap:wrap;gap:3px}
+.b{font-size:10.5px;padding:1px 6px;border-radius:10px;background:#f1ede6;color:#57534e;font-weight:600}
+.b.full{background:#1f2328;color:#fff}
+.chip{display:inline-block;font-size:12px;font-weight:700;padding:2px 7px;border-radius:6px;margin:1px;border:1px solid rgba(0,0,0,.12)}
+.s-AM{background:var(--AM)}.s-PM{background:var(--PM)}.s-C{background:var(--C)}.s-C1{background:var(--C1)}.s-C2{background:var(--C2)}.s-OFF{background:var(--OFF)}
+td.rc{cursor:pointer;min-width:84px;height:44px;user-select:none}
+td.rc:hover{background:#fff7ed}
+.free{color:#c4bdb2;font-size:12px}
+.brush{padding:6px 12px;border:2px solid rgba(0,0,0,.12)}
+.brush.on{outline:3px solid var(--accent);outline-offset:1px}
+td.cell{position:relative;padding:0;min-width:84px}
+td.cell select{appearance:none;-webkit-appearance:none;border:0;background:transparent;width:100%;height:36px;text-align:center;text-align-last:center;font-weight:800;font-size:13px;cursor:pointer;color:#111}
+td.cell.mism{box-shadow:inset 0 0 0 2px var(--err)}
+.lock{position:absolute;top:1px;right:1px;border:0;background:transparent;padding:0 2px;font-size:11px;line-height:1}
+tfoot td{font-size:12.5px;background:#faf8f5;font-weight:600}
+tfoot td.name{background:#faf8f5}
+.bad{color:var(--err);font-weight:800}
+.good{color:var(--ok)}
+.miss{color:var(--err);font-size:11px;display:block;line-height:1.3}
+#warnings{margin-top:14px;display:grid;gap:6px}
+.w{padding:8px 12px;border-radius:8px;background:#fff;border-left:4px solid var(--line);font-size:13px}
+.w.err{border-color:var(--err)}.w.warn{border-color:var(--warn)}.w.info{border-color:#9ca3af;color:#4b5563}.w.ok{border-color:var(--ok)}
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;font-size:13px;color:#374151}
+.empty{padding:40px;text-align:center;color:var(--muted);background:#fff;border:1px dashed var(--line);border-radius:10px}
+h3{margin:24px 0 8px;font-size:15px}
+input[type=text],input[type=number],input.nm,select.fx{font:inherit;padding:5px 7px;border:1px solid var(--line);border-radius:6px;background:#fff;width:100%}
+input[type=number]{width:80px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px}
+.card h4{margin:0 0 10px;font-size:14px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:7px 0}
+#busy{position:fixed;inset:0;background:rgba(31,35,40,.45);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:700;z-index:50}
+#busy[hidden],#modal[hidden]{display:none}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:60;padding:16px}
+#modal .box{background:#fff;border-radius:12px;max-width:1000px;width:100%;max-height:95vh;display:flex;flex-direction:column;overflow:hidden}
+.mhead{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
+.mimg{overflow:auto;padding:12px;background:#eee}
+.mimg img{max-width:100%;display:block;margin:0 auto;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+.mfoot{padding:10px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.mfoot .hint{width:100%;margin:2px 0 0}
+#copyMsg{font-size:13px;color:var(--ok)}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>🍕 Xếp lịch làm việc</h1><div class="sub">Tiệm Pizza · lịch 1 tuần</div></div>
+  <div><label>Tuần bắt đầu (Thứ 2)<input type="date" id="weekStart"></label><span id="weekLabel"></span></div>
+</header>
+<nav class="tabs">
+  <button data-tab="reg" class="on">1 · Đăng ký ca</button>
+  <button data-tab="res">2 · Lịch đã xếp</button>
+  <button data-tab="staff">Nhân viên &amp; kỹ năng</button>
+  <button data-tab="set">Tiêu chí xếp lịch</button>
+</nav>
+<main>
+<section id="tab-reg">
+  <div class="toolbar">
+    <b>Tick nhanh:</b><span id="brushes" style="display:flex;gap:6px;flex-wrap:wrap"></span>
+    <span class="spacer"></span>
+    <button id="btnFixed" class="ghost">Nạp lịch cố định</button>
+    <button id="btnClear" class="ghost">Xoá hết đăng ký</button>
+    <button id="btnSolve" class="primary">Phân lịch ▶</button>
+  </div>
+  <p class="hint">Chọn 1 ca ở “Tick nhanh” rồi bấm vào ô để tick / bỏ tick. Một ô tick nhiều ca = bạn đó đi ca nào trong số đó cũng được. Ô <b>tự do</b> = để máy tự xếp. Lịch cố định (Quang, Khang, Thùy…) đã được nạp sẵn.</p>
+  <div class="tablewrap"><table id="regTable"></table></div>
+  <div class="legend" id="legend"></div>
+</section>
+
+<section id="tab-res" hidden>
+  <div class="toolbar">
+    <button id="btnResolve" class="primary">Xếp lại (giữ ô đã sửa 🔒)</button>
+    <button id="btnUnlock" class="ghost">Bỏ khoá tất cả</button>
+    <span class="spacer"></span>
+    <button id="btnExport" class="accent">Xuất ảnh PNG</button>
+  </div>
+  <p class="hint">Đổi ca trực tiếp ở ô → ô đó được khoá 🔒. Bấm “Xếp lại” để máy xếp lại các ô còn lại quanh những ô bạn đã sửa. Bấm vào 🔒 để mở khoá. Ô viền đỏ = khác với đăng ký.</p>
+  <div id="resEmpty" class="empty">Chưa có lịch. Qua tab “Đăng ký ca” và bấm <b>Phân lịch</b>.</div>
+  <div class="tablewrap" id="resWrap"><table id="resTable"></table></div>
+  <div id="warnings"></div>
+  <h3>Nhân sự phụ (hiện trên ảnh xuất)</h3>
+  <div class="tablewrap"><table id="extraTable"></table></div>
+  <div style="margin-top:8px"><button id="btnAddExtra" class="ghost small">+ Thêm dòng</button></div>
+</section>
+
+<section id="tab-staff" hidden>
+  <p class="hint">Sửa tên, kỹ năng và lịch cố định hằng tuần. Đổi lịch cố định sẽ tự cập nhật vào bảng đăng ký.</p>
+  <div class="tablewrap"><table id="staffTable"></table></div>
+  <div class="toolbar" style="margin-top:10px">
+    <input type="text" id="newName" placeholder="Tên nhân viên mới" style="max-width:260px">
+    <button id="btnAdd" class="ghost">+ Thêm nhân viên</button>
+    <span class="spacer"></span>
+    <button id="btnResetStaff" class="ghost small">Khôi phục danh sách mặc định</button>
+  </div>
+</section>
+
+<section id="tab-set" hidden>
+  <div class="grid" id="settings"></div>
+</section>
+</main>
+
+<div id="busy" hidden>Đang xếp lịch…</div>
+<div id="modal" hidden>
+  <div class="box">
+    <div class="mhead"><b>Ảnh lịch tuần</b><button id="mClose" class="small">✕</button></div>
+    <div class="mimg"><img id="pngImg" alt="Lịch tuần"></div>
+    <div class="mfoot">
+      <a id="dl" class="btn primary" download="lich-tuan.png">Tải PNG</a>
+      <button id="copyImg">Copy ảnh</button><span id="copyMsg"></span>
+      <p class="hint">Nếu nút Tải không chạy (trình xem chặn tải về), nhấn chuột phải / nhấn giữ vào ảnh → “Lưu hình ảnh”, hoặc dùng Copy ảnh rồi dán vào Zalo.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const SH=['AM','C','C1','C2','PM','OFF'];
+const TIMES={AM:'8h–16h30',C:'9h–21h',C1:'10h–22h',C2:'11h–23h',PM:'14h30–23h30',OFF:'Nghỉ'};
+const COLORS={AM:'#ffffff',C:'#3fd13f',C1:'#3ad7ea',C2:'#f7943a',PM:'#d5dae1',OFF:'#fff23a'};
+const isM=[1,1,1,1,0,0], isE=[0,1,1,1,1,0], isF=[0,1,1,1,0,0];
+const SK=[['nuong','Nướng'],['cat','Cắt'],['dapde','Đập đế'],['lambanh','Làm bánh']];
+const ALL=SK.map(s=>s[0]);
+const DN=['MON','TUE','WED','THU','FRI','SAT','SUN'], DV=['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7','CN'];
+const D7=[0,1,2,3,4,5,6];
+const KEY='pizza-sched-v1';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function ymd(t){return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')}
+function nextMonday(){const t=new Date();const dow=(t.getDay()+6)%7;t.setDate(t.getDate()-dow+7);return ymd(t)}
+function dayDate(d,y){const t=new Date(state.weekStart+'T00:00:00');if(isNaN(t))return '';t.setDate(t.getDate()+d);return t.getDate()+'/'+(t.getMonth()+1)+(y?'/'+t.getFullYear():'')}
+
+function defaultStaff(){
+  const L=[
+    ['Nguyễn Thị Thùy',ALL,{3:'OFF'}],
+    ['Lê Khang',ALL,{3:'OFF'}],
+    ['Trần Thị Tuyết Trinh',ALL,{6:'OFF'}],
+    ['Đoàn Minh Quang',ALL,{0:'OFF',1:'PM',6:'AM'}],
+    ['Nguyễn Thanh Trí',ALL],
+    ['Đặng Hữu Đang',['cat','dapde','lambanh'],{2:'OFF'}],
+    ['Nguyễn Thanh Toàn',['nuong','cat'],{6:'OFF'}],
+    ['Nguyễn Ngọc Thùy',['cat','dapde','lambanh'],{0:'OFF'}],
+    ['Nguyễn Minh Tài',['cat','lambanh']],
+    ['Đoàn Ngọc Bảo',['cat']],
+    ['Đặng Uyên Nhi',['cat']],
+    ['Huỳnh Ngọc Ánh',['lambanh']],
+    ['Võ Thị Hoàng Lạc',['lambanh']],
+    ['Đặng Đức',['cat']],
+    ['Nguyễn Thị Xuân Mơ',['dapde','lambanh']],
+  ];
+  return L.map((x,k)=>({id:'s'+(k+1),name:x[0],skills:x[1].slice(),fixed:{...(x[2]||{})}}));
+}
+function regFrom(staff){const r={};staff.forEach(p=>{r[p.id]=D7.map(d=>p.fixed[d]?[p.fixed[d]]:[])});return r}
+function defaultSettings(){return{tAM:4,tC:1,tC1:2,tC2:2,tPM:4,minM:9,minE:9,offWeek:1,sk:{nuong:1,cat:1,dapde:1,lambanh:1},clopen:true}}
+function defaultExtras(){return[
+  {name:'Sang',days:['8H-15H','8H-15H','8H-15H','OFF','8H-15H','8H-15H','8H-15H']},
+  {name:'C. Đào',days:['8H-11H','8H-11H','8H-11H','OFF','8H-11H','8H-11H','8H-11H']}]}
+function defaultState(){const staff=defaultStaff();return{weekStart:nextMonday(),staff,reg:regFrom(staff),result:null,locks:{},settings:defaultSettings(),extras:defaultExtras()}}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&Array.isArray(s.staff))return s}catch(e){}return null}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
+
+let state=load()||defaultState();
+state.settings={...defaultSettings(),...(state.settings||{}),sk:{...defaultSettings().sk,...((state.settings||{}).sk||{})}};
+if(!state.extras)state.extras=defaultExtras();
+if(!state.locks)state.locks={};
+if(!state.reg)state.reg={};
+function ensure(){state.staff.forEach(p=>{
+  if(!state.reg[p.id])state.reg[p.id]=D7.map(()=>[]);
+  if(state.result&&!state.result[p.id])state.result[p.id]=D7.map(()=>'OFF');
+  if(!state.locks[p.id])state.locks[p.id]=D7.map(()=>false);
+})}
+ensure();
+let brush='OFF', tab='reg', lastCanvas=null;
+
+const chip=v=>`<span class="chip s-${v}">${v}</span>`;
+function skBadges(p){if(ALL.every(k=>p.skills.includes(k)))return '<span class="b full">Full skill</span>';
+  return SK.filter(k=>p.skills.includes(k[0])).map(k=>`<span class="b">${k[1]}</span>`).join('')||'<span class="b" style="color:#b91c1c">Chưa có skill</span>'}
+function headRow(extra){return `<thead><tr><th class="name">Nhân viên</th>${D7.map(d=>`<th>${DV[d]}<small>${dayDate(d)}</small></th>`).join('')}${extra||''}</tr></thead>`}
+function offTarget(p){let f=0;D7.forEach(d=>{const r=state.reg[p.id][d];if(r.length===1&&r[0]==='OFF')f++});return Math.max(state.settings.offWeek,f)}
+
+/* ---------- RENDER ---------- */
+function render(){
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
+  ['reg','res','staff','set'].forEach(x=>$('#tab-'+x).hidden=x!==tab);
+  $('#weekStart').value=state.weekStart;
+  $('#weekLabel').textContent=`${dayDate(0)} – ${dayDate(6,true)}`;
+  if(tab==='reg')renderReg();
+  if(tab==='res')renderRes();
+  if(tab==='staff')renderStaff();
+  if(tab==='set')renderSettings();
+}
+function renderReg(){
+  $('#brushes').innerHTML=[...SH,'CLR'].map(b=>`<button class="brush ${b===brush?'on':''} ${b!=='CLR'?'s-'+b:''}" data-b="${b}">${b==='CLR'?'Xoá ô':b}</button>`).join('');
+  let h=headRow();
+  h+='<tbody>'+state.staff.map(p=>`<tr><td class="name">${esc(p.name)}<div class="sk">${skBadges(p)}</div></td>${D7.map(d=>{const r=state.reg[p.id][d];
+    return `<td class="rc" data-id="${p.id}" data-d="${d}">${r.length?SH.filter(s=>r.includes(s)).map(chip).join(''):'<span class="free">tự do</span>'}</td>`}).join('')}</tr>`).join('')+'</tbody>';
+  const offC=D7.map(d=>state.staff.filter(p=>{const r=state.reg[p.id][d];return r.length===1&&r[0]==='OFF'}).length);
+  h+=`<tfoot><tr><td class="name">Đã đăng ký OFF</td>${offC.map(c=>`<td class="${c>3?'bad':''}">${c}</td>`).join('')}</tr></tfoot>`;
+  $('#regTable').innerHTML=h;
+  $('#legend').innerHTML=SH.filter(s=>s!=='OFF').map(s=>`<span>${chip(s)} ${TIMES[s]}</span>`).join('')+`<span>${chip('OFF')} Nghỉ</span>`;
+}
+function analyze(){
+  const s=state.settings,fullT=s.tC+s.tC1+s.tC2,days=[],warn=[],person={};
+  D7.forEach(d=>{
+    const cnt={AM:0,C:0,C1:0,C2:0,PM:0,OFF:0},sm={},se={};ALL.forEach(k=>{sm[k]=0;se[k]=0});
+    state.staff.forEach(p=>{const v=state.result[p.id][d];cnt[v]++;const i=SH.indexOf(v);p.skills.forEach(k=>{if(isM[i])sm[k]++;if(isE[i])se[k]++})});
+    const morning=cnt.AM+cnt.C+cnt.C1+cnt.C2,evening=cnt.PM+cnt.C+cnt.C1+cnt.C2,full=cnt.C+cnt.C1+cnt.C2;
+    const missM=SK.filter(k=>sm[k[0]]<(s.sk[k[0]]||0)).map(k=>k[1]),missE=SK.filter(k=>se[k[0]]<(s.sk[k[0]]||0)).map(k=>k[1]);
+    days.push({cnt,morning,evening,full,missM,missE});
+    if(morning<s.minM)warn.push(['err',`${DV[d]}: ca sáng chỉ có ${morning}/${s.minM} người`]);
+    if(evening<s.minE)warn.push(['err',`${DV[d]}: ca tối chỉ có ${evening}/${s.minE} người`]);
+    if(missM.length)warn.push(['err',`${DV[d]}: ca sáng thiếu kỹ năng ${missM.join(', ')}`]);
+    if(missE.length)warn.push(['err',`${DV[d]}: ca tối thiếu kỹ năng ${missE.join(', ')}`]);
+    if(cnt.AM!==s.tAM||full!==fullT||cnt.PM!==s.tPM)warn.push(['info',`${DV[d]}: ${cnt.AM} AM · ${full} Full · ${cnt.PM} PM (mục tiêu ${s.tAM}/${fullT}/${s.tPM})`]);
+  });
+  state.staff.forEach(p=>{
+    const r=state.result[p.id];const off=r.filter(v=>v==='OFF').length,full=r.filter(v=>isF[SH.indexOf(v)]).length;
+    person[p.id]={off,full};const t=offTarget(p);
+    if(off!==t)warn.push(['warn',`${p.name}: ${off} ngày off (mục tiêu ${t})`]);
+    D7.forEach(d=>{
+      const g=state.reg[p.id][d];if(g.length&&!g.includes(r[d]))warn.push(['warn',`${p.name} – ${DV[d]}: xếp ${r[d]}, khác đăng ký (${g.join('/')})`]);
+      if(s.clopen&&d<6&&(r[d]==='PM'||r[d]==='C2')&&r[d+1]==='AM')warn.push(['warn',`${p.name}: ${r[d]} ${DV[d]} rồi AM ${DV[d+1]} (đóng ca muộn → mở ca sớm)`]);
+    });
+  });
+  return{days,warn,person};
+}
+function renderRes(){
+  const has=!!state.result;$('#resEmpty').hidden=has;$('#resWrap').hidden=!has;$('#btnResolve').disabled=!has;$('#btnExport').disabled=!has;
+  renderExtras();
+  if(!has){$('#warnings').innerHTML='';return}
+  ensure();
+  const A=analyze(),s=state.settings;
+  let h=headRow('<th>Off</th><th>Full</th>')+'<tbody>';
+  state.staff.forEach(p=>{
+    h+=`<tr><td class="name">${esc(p.name)}<div class="sk">${skBadges(p)}</div></td>`;
+    D7.forEach(d=>{const v=state.result[p.id][d],lk=state.locks[p.id][d],g=state.reg[p.id][d],mm=g.length&&!g.includes(v);
+      h+=`<td class="cell s-${v} ${mm?'mism':''}" title="${esc(TIMES[v])}${mm?' · khác đăng ký':''}"><select data-id="${p.id}" data-d="${d}">${SH.map(o=>`<option${o===v?' selected':''}>${o}</option>`).join('')}</select>${lk?`<button class="lock" data-id="${p.id}" data-d="${d}" title="Bỏ khoá">🔒</button>`:''}</td>`});
+    const ps=A.person[p.id];h+=`<td class="${ps.off!==offTarget(p)?'bad':''}">${ps.off}</td><td>${ps.full}</td></tr>`;
+  });
+  h+='</tbody><tfoot>';
+  const fullT=s.tC+s.tC1+s.tC2;
+  const row=(lab,f)=>`<tr><td class="name">${lab}</td>${A.days.map(f).join('')}<td></td><td></td></tr>`;
+  h+=row(`AM <small>(mục tiêu ${s.tAM})</small>`,x=>`<td>${x.cnt.AM}</td>`);
+  h+=row(`Full C/C1/C2 <small>(mục tiêu ${fullT})</small>`,x=>`<td>${x.full} <small style="color:#6b7280">(${x.cnt.C}/${x.cnt.C1}/${x.cnt.C2})</small></td>`);
+  h+=row(`PM <small>(mục tiêu ${s.tPM})</small>`,x=>`<td>${x.cnt.PM}</td>`);
+  h+=row('OFF',x=>`<td>${x.cnt.OFF}</td>`);
+  h+=row(`Ca sáng <small>(≥${s.minM})</small>`,x=>`<td class="${x.morning<s.minM?'bad':'good'}">${x.morning}${x.missM.length?`<span class="miss">thiếu ${x.missM.join(', ')}</span>`:''}</td>`);
+  h+=row(`Ca tối <small>(≥${s.minE})</small>`,x=>`<td class="${x.evening<s.minE?'bad':'good'}">${x.evening}${x.missE.length?`<span class="miss">thiếu ${x.missE.join(', ')}</span>`:''}</td>`);
+  h+='</tfoot>';
+  $('#resTable').innerHTML=h;
+  const serious=A.warn.filter(w=>w[0]!=='info');
+  $('#warnings').innerHTML=(serious.length?'':`<div class="w ok">✅ Đạt đủ người tối thiểu, đủ kỹ năng mỗi ca, đúng số ngày off.</div>`)+
+    A.warn.map(w=>`<div class="w ${w[0]}">${w[0]==='err'?'⛔ ':w[0]==='warn'?'⚠️ ':'ℹ️ '}${esc(w[1])}</div>`).join('');
+}
+function renderExtras(){
+  $('#extraTable').innerHTML=headRow('<th></th>')+'<tbody>'+state.extras.map((e,i)=>`<tr><td class="name"><input type="text" data-i="${i}" data-f="name" value="${esc(e.name)}"></td>${D7.map(d=>`<td><input type="text" data-i="${i}" data-d="${d}" value="${esc(e.days[d]||'')}"></td>`).join('')}<td><button class="small ghost xdel" data-i="${i}">✕</button></td></tr>`).join('')+'</tbody>';
+}
+function renderStaff(){
+  let h=`<thead><tr><th class="name">Họ tên</th>${SK.map(k=>`<th>${k[1]}</th>`).join('')}${DV.map(d=>`<th>Cố định<small>${d}</small></th>`).join('')}<th></th></tr></thead><tbody>`;
+  h+=state.staff.map(p=>`<tr data-id="${p.id}"><td class="name"><input class="nm" value="${esc(p.name)}"></td>${SK.map(k=>`<td><input type="checkbox" class="skc" data-k="${k[0]}"${p.skills.includes(k[0])?' checked':''}></td>`).join('')}${D7.map(d=>`<td><select class="fx" data-d="${d}"><option value="">—</option>${SH.map(o=>`<option${p.fixed[d]===o?' selected':''}>${o}</option>`).join('')}</select></td>`).join('')}<td><button class="del ghost small">Xoá</button></td></tr>`).join('')+'</tbody>';
+  $('#staffTable').innerHTML=h;
+}
+function renderSettings(){
+  const s=state.settings;
+  const num=(k,lab,v)=>`<div class="row"><span>${lab}</span><input type="number" min="0" max="30" data-k="${k}" value="${v}"></div>`;
+  $('#settings').innerHTML=
+   `<div class="card"><h4>Số người mỗi ca / ngày (mục tiêu)</h4>${num('tAM','AM (8h–16h30)',s.tAM)}${num('tC','C (9h–21h)',s.tC)}${num('tC1','C1 (10h–22h)',s.tC1)}${num('tC2','C2 (11h–23h)',s.tC2)}${num('tPM','PM (14h30–23h30)',s.tPM)}</div>`+
+   `<div class="card"><h4>Tối thiểu (bắt buộc)</h4>${num('minM','Người ca sáng (AM + Full)',s.minM)}${num('minE','Người ca tối (PM + Full)',s.minE)}${num('offWeek','Số ngày off / người / tuần',s.offWeek)}</div>`+
+   `<div class="card"><h4>Kỹ năng tối thiểu mỗi ca sáng / tối</h4>${SK.map(k=>num('sk.'+k[0],k[1],s.sk[k[0]])).join('')}</div>`+
+   `<div class="card"><h4>Khác</h4><div class="row"><span>Tránh PM/C2 hôm trước rồi AM hôm sau</span><input type="checkbox" data-k="clopen"${s.clopen?' checked':''}></div><div class="row"><button id="btnResetSet" class="ghost small">Khôi phục mặc định</button></div></div>`;
+}
+
+/* ---------- SOLVER ---------- */
+function solve(keep){
+  const st=state.staff,n=st.length,s=state.settings,D=7;if(!n)return[];
+  const allowL=[],allowM=[];
+  for(let i=0;i<n;i++){const p=st[i];allowL[i]=[];allowM[i]=[];
+    for(let d=0;d<D;d++){let set;
+      if(keep&&state.result&&state.locks[p.id]?.[d]&&state.result[p.id])set=[state.result[p.id][d]];
+      else{const r=state.reg[p.id]?.[d]||[];set=r.length?r:SH}
+      let idx=set.map(x=>SH.indexOf(x)).filter(x=>x>=0);if(!idx.length)idx=[0,1,2,3,4,5];
+      allowL[i][d]=idx;allowM[i][d]=idx.reduce((m,x)=>m|(1<<x),0)}}
+  const skm=st.map(p=>SK.reduce((m,k,j)=>p.skills.includes(k[0])?m|(1<<j):m,0));
+  const offT=st.map((p,i)=>{let f=0;for(let d=0;d<D;d++)if(allowL[i][d].length===1&&allowL[i][d][0]===5)f++;return Math.max(s.offWeek,f)});
+  const fullT=s.tC+s.tC1+s.tC2,skMin=SK.map(k=>s.sk[k[0]]||0);
+  const avgF=st.map((p,i)=>Math.min(D-offT[i],fullT*D/n));
+  const cnt=new Int32Array(6),sm=new Int32Array(4),se=new Int32Array(4);
+  function dayCost(a,d){cnt.fill(0);sm.fill(0);se.fill(0);
+    for(let i=0;i<n;i++){const v=a[i][d],m=skm[i];cnt[v]++;
+      if(isM[v])for(let k=0;k<4;k++)if(m>>k&1)sm[k]++;
+      if(isE[v])for(let k=0;k<4;k++)if(m>>k&1)se[k]++}
+    const mo=cnt[0]+cnt[1]+cnt[2]+cnt[3],ev=cnt[1]+cnt[2]+cnt[3]+cnt[4],fu=cnt[1]+cnt[2]+cnt[3];
+    let c=1000*Math.max(0,s.minM-mo)+1000*Math.max(0,s.minE-ev);
+    c+=25*Math.abs(fu-fullT)+12*(Math.abs(cnt[0]-s.tAM)+Math.abs(cnt[4]-s.tPM))+6*(Math.abs(cnt[1]-s.tC)+Math.abs(cnt[2]-s.tC1)+Math.abs(cnt[3]-s.tC2));
+    for(let k=0;k<4;k++){c+=600*Math.max(0,skMin[k]-sm[k])+600*Math.max(0,skMin[k]-se[k]);
+      if(skMin[k])c+=4*Math.max(0,skMin[k]+1-sm[k])+4*Math.max(0,skMin[k]+1-se[k])}
+    return c}
+  function perCost(a,i){const r=a[i];let off=0,fu=0,c=0;
+    for(let d=0;d<D;d++){const v=r[d];if(v===5)off++;else if(isF[v])fu++;
+      if(s.clopen&&d<D-1&&(v===4||v===3)&&r[d+1]===0)c+=40}
+    c+=300*Math.abs(off-offT[i]);const x=fu-avgF[i];return c+3*x*x}
+  let best=null,bestC=Infinity;const R=4,IT=150000,T0=400,T1=0.2;
+  for(let r=0;r<R;r++){
+    const a=[];for(let i=0;i<n;i++){a[i]=[];for(let d=0;d<D;d++){const L=allowL[i][d];a[i][d]=L[Math.random()*L.length|0]}}
+    const dc=[],pc=[];for(let d=0;d<D;d++)dc[d]=dayCost(a,d);for(let i=0;i<n;i++)pc[i]=perCost(a,i);
+    for(let it=0;it<IT;it++){const T=T0*Math.pow(T1/T0,it/IT),d=Math.random()*D|0,mv=Math.random();
+      if(mv<0.25){const i=Math.random()*n|0,e=Math.random()*D|0;if(e===d)continue;const v1=a[i][d],v2=a[i][e];
+        if(v1===v2||!(allowM[i][d]>>v2&1)||!(allowM[i][e]>>v1&1))continue;a[i][d]=v2;a[i][e]=v1;
+        const n1=dayCost(a,d),n2=dayCost(a,e),np=perCost(a,i),dl=n1-dc[d]+n2-dc[e]+np-pc[i];
+        if(dl<=0||Math.random()<Math.exp(-dl/T)){dc[d]=n1;dc[e]=n2;pc[i]=np}else{a[i][d]=v1;a[i][e]=v2}}
+      else if(mv<0.6){const i=Math.random()*n|0,L=allowL[i][d];if(L.length<2)continue;
+        const nv=L[Math.random()*L.length|0],ov=a[i][d];if(nv===ov)continue;a[i][d]=nv;
+        const nd=dayCost(a,d),np=perCost(a,i),dl=nd-dc[d]+np-pc[i];
+        if(dl<=0||Math.random()<Math.exp(-dl/T)){dc[d]=nd;pc[i]=np}else a[i][d]=ov}
+      else{const i=Math.random()*n|0,j=Math.random()*n|0;if(i===j)continue;const vi=a[i][d],vj=a[j][d];
+        if(vi===vj||!(allowM[i][d]>>vj&1)||!(allowM[j][d]>>vi&1))continue;a[i][d]=vj;a[j][d]=vi;
+        const nd=dayCost(a,d),ni=perCost(a,i),nj=perCost(a,j),dl=nd-dc[d]+ni-pc[i]+nj-pc[j];
+        if(dl<=0||Math.random()<Math.exp(-dl/T)){dc[d]=nd;pc[i]=ni;pc[j]=nj}else{a[i][d]=vi;a[j][d]=vj}}}
+    let tot=0;for(let d=0;d<D;d++)tot+=dayCost(a,d);for(let i=0;i<n;i++)tot+=perCost(a,i);
+    if(tot<bestC){bestC=tot;best=a.map(x=>x.slice())}
+  }
+  return best.map(row=>row.map(v=>SH[v]));
+}
+function runSolve(keep){
+  $('#busy').hidden=false;
+  setTimeout(()=>{try{const b=solve(keep);const res={};state.staff.forEach((p,i)=>res[p.id]=b[i]);
+    if(!keep)state.locks={};state.result=res;ensure();save();tab='res'}
+    finally{$('#busy').hidden=true;render()}},40);
+}
+
+/* ---------- EXPORT ---------- */
+function drawPNG(){
+  const st=state.staff,ex=state.extras,sc=2,pad=24,nameW=240,colW=96,rowH=28,titleH=46,headH=52,gap=14,legH=34;
+  const W=pad*2+nameW+colW*7,H=pad+titleH+headH+rowH*st.length+gap+rowH*ex.length+gap+legH+pad;
+  const cv=document.createElement('canvas');cv.width=W*sc;cv.height=H*sc;const g=cv.getContext('2d');g.scale(sc,sc);
+  const F='"Segoe UI",Roboto,Arial,sans-serif';g.fillStyle='#fff';g.fillRect(0,0,W,H);g.textBaseline='middle';
+  g.fillStyle='#1f2328';g.font=`700 20px ${F}`;g.textAlign='left';
+  g.fillText(`LỊCH LÀM VIỆC TUẦN ${dayDate(0)} – ${dayDate(6,true)}`,pad,pad+titleH/2-6);
+  function box(x,y,w,h,fill,text,o={}){g.fillStyle=fill;g.fillRect(x,y,w,h);g.strokeStyle='#8f969e';g.lineWidth=1;g.strokeRect(x+.5,y+.5,w,h);
+    if(text!=null&&text!==''){g.fillStyle='#111';g.font=`${o.w||700} ${o.s||13}px ${F}`;g.textAlign=o.a||'center';g.fillText(text,o.a==='left'?x+10:x+w/2,y+h/2+1)}}
+  const x0=pad;let y=pad+titleH;
+  box(x0,y,nameW,headH,'#f4b183','EE Name',{s:14});
+  D7.forEach(d=>{const x=x0+nameW+d*colW;box(x,y,colW,headH/2,'#f4b183',DN[d]);box(x,y+headH/2,colW,headH/2,'#f4b183',dayDate(d),{w:600})});
+  y+=headH;
+  st.forEach(p=>{box(x0,y,nameW,rowH,'#fff',p.name,{a:'left'});D7.forEach(d=>{const v=state.result[p.id][d];box(x0+nameW+d*colW,y,colW,rowH,COLORS[v],v)});y+=rowH});
+  y+=gap;
+  ex.forEach(e=>{box(x0,y,nameW,rowH,'#fff',e.name,{a:'left'});D7.forEach(d=>{const t=e.days[d]||'';box(x0+nameW+d*colW,y,colW,rowH,/^off$/i.test(t.trim())?COLORS.OFF:'#fff',t)});y+=rowH});
+  y+=gap;let lx=x0;g.font=`600 12.5px ${F}`;g.textAlign='left';
+  ['C','C1','C2','AM','PM','OFF'].forEach(k=>{g.fillStyle=COLORS[k];g.fillRect(lx,y+8,18,18);g.strokeStyle='#8f969e';g.strokeRect(lx+.5,y+8.5,18,18);
+    const t=`${k}: ${TIMES[k]}`;g.fillStyle='#111';g.fillText(t,lx+24,y+17);lx+=24+g.measureText(t).width+20});
+  return cv;
+}
+function showExport(){lastCanvas=drawPNG();const url=lastCanvas.toDataURL('image/png');$('#pngImg').src=url;const a=$('#dl');a.href=url;a.download=`lich-tuan-${state.weekStart}.png`;$('#copyMsg').textContent='';$('#modal').hidden=false}
+
+/* ---------- EVENTS ---------- */
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render()});
+$('#weekStart').onchange=e=>{if(e.target.value){state.weekStart=e.target.value;save();render()}};
+$('#brushes').onclick=e=>{const b=e.target.closest('[data-b]');if(b){brush=b.dataset.b;renderReg()}};
+$('#regTable').onclick=e=>{const td=e.target.closest('td.rc');if(!td)return;const r=state.reg[td.dataset.id],d=+td.dataset.d;
+  if(brush==='CLR')r[d]=[];else r[d]=r[d].includes(brush)?r[d].filter(x=>x!==brush):[...r[d],brush];save();renderReg()};
+$('#btnFixed').onclick=()=>{state.reg=regFrom(state.staff);save();renderReg()};
+$('#btnClear').onclick=()=>{state.staff.forEach(p=>state.reg[p.id]=D7.map(()=>[]));save();renderReg()};
+$('#btnSolve').onclick=()=>runSolve(false);
+$('#btnResolve').onclick=()=>runSolve(true);
+$('#btnUnlock').onclick=()=>{state.locks={};ensure();save();renderRes()};
+$('#btnExport').onclick=showExport;
+$('#mClose').onclick=()=>$('#modal').hidden=true;
+$('#modal').onclick=e=>{if(e.target.id==='modal')$('#modal').hidden=true};
+let dlNs=null;
+try{if(window.claude&&claude.use)claude.use('downloads').then(ns=>{dlNs=ns}).catch(()=>{})}catch(e){}
+$('#dl').onclick=e=>{if(!dlNs||!lastCanvas)return;e.preventDefault();
+  lastCanvas.toBlob(b=>{dlNs.save({filename:`lich-tuan-${state.weekStart}.png`,data:b}).then(()=>$('#copyMsg').textContent='Đã tải ảnh ✓').catch(err=>{
+    $('#copyMsg').textContent=err&&err.code==='declined'?'':'Không tải được – hãy nhấn giữ / chuột phải vào ảnh để lưu.'})},'image/png')};
+$('#copyImg').onclick=()=>{try{const item=new ClipboardItem({'image/png':new Promise(r=>lastCanvas.toBlob(r,'image/png'))});
+  navigator.clipboard.write([item]).then(()=>$('#copyMsg').textContent='Đã copy ảnh ✓').catch(()=>$('#copyMsg').textContent='Trình duyệt chặn copy – hãy lưu ảnh thủ công.')}catch(e){$('#copyMsg').textContent='Trình duyệt chặn copy – hãy lưu ảnh thủ công.'}};
+$('#resTable').onchange=e=>{const s=e.target.closest('select');if(!s)return;const id=s.dataset.id,d=+s.dataset.d;state.result[id][d]=s.value;state.locks[id][d]=true;save();renderRes()};
+$('#resTable').onclick=e=>{const b=e.target.closest('.lock');if(!b)return;state.locks[b.dataset.id][+b.dataset.d]=false;save();renderRes()};
+$('#extraTable').onchange=e=>{const t=e.target;if(t.dataset.i==null)return;const x=state.extras[+t.dataset.i];if(t.dataset.f==='name')x.name=t.value;else x.days[+t.dataset.d]=t.value;save()};
+$('#extraTable').onclick=e=>{const b=e.target.closest('.xdel');if(!b)return;state.extras.splice(+b.dataset.i,1);save();renderExtras()};
+$('#btnAddExtra').onclick=()=>{state.extras.push({name:'',days:D7.map(()=>'')});save();renderExtras()};
+$('#staffTable').onchange=e=>{const tr=e.target.closest('tr[data-id]');if(!tr)return;const p=state.staff.find(x=>x.id===tr.dataset.id),t=e.target;
+  if(t.classList.contains('nm'))p.name=t.value.trim()||p.name;
+  else if(t.classList.contains('skc')){p.skills=t.checked?[...new Set([...p.skills,t.dataset.k])]:p.skills.filter(k=>k!==t.dataset.k)}
+  else if(t.classList.contains('fx')){const d=+t.dataset.d;if(t.value)p.fixed[d]=t.value;else delete p.fixed[d];state.reg[p.id][d]=t.value?[t.value]:[]}
+  save()};
+$('#staffTable').onclick=e=>{const b=e.target.closest('.del');if(!b)return;
+  if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Chắc chắn?';b.style.color='#b91c1c';return}
+  const id=b.closest('tr').dataset.id;state.staff=state.staff.filter(p=>p.id!==id);delete state.reg[id];if(state.result)delete state.result[id];delete state.locks[id];save();renderStaff()};
+$('#btnAdd').onclick=()=>{const n=$('#newName').value.trim();if(!n)return;const id='s'+Date.now();state.staff.push({id,name:n,skills:[],fixed:{}});ensure();$('#newName').value='';save();renderStaff()};
+$('#btnResetStaff').onclick=e=>{const b=e.target;if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Bấm lần nữa để khôi phục';return}
+  state.staff=defaultStaff();state.reg=regFrom(state.staff);state.result=null;state.locks={};ensure();save();b.dataset.armed='';b.textContent='Khôi phục danh sách mặc định';renderStaff()};
+$('#settings').onchange=e=>{const t=e.target,k=t.dataset.k;if(!k)return;const s=state.settings;
+  if(k==='clopen')s.clopen=t.checked;else{const v=Math.max(0,parseInt(t.value)||0);if(k.startsWith('sk.'))s.sk[k.slice(3)]=v;else s[k]=v}save()};
+$('#settings').onclick=e=>{if(e.target.id==='btnResetSet'){state.settings=defaultSettings();save();renderSettings()}};
+render();
+</script>
+</body>
+</html>
