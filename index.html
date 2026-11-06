@@ -76,6 +76,10 @@ input[type=number]{width:80px}
 .mfoot{padding:10px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .mfoot .hint{width:100%;margin:2px 0 0}
 #copyMsg{font-size:13px;color:var(--ok)}
+.card.wide{grid-column:1/-1}
+table.pd{min-width:640px}
+table.pd td,table.pd th{padding:4px}
+.b.sep{background:#7c2d12;color:#fff}
 </style>
 </head>
 <body>
@@ -98,7 +102,7 @@ input[type=number]{width:80px}
     <button id="btnClear" class="ghost">Xoá hết đăng ký</button>
     <button id="btnSolve" class="primary">Phân lịch ▶</button>
   </div>
-  <p class="hint">Chọn 1 ca ở “Tick nhanh” rồi bấm vào ô để tick / bỏ tick. Một ô tick nhiều ca = bạn đó đi ca nào trong số đó cũng được. Ô <b>tự do</b> = để máy tự xếp. Lịch cố định (Quang, Khang, Thùy…) đã được nạp sẵn.</p>
+  <p class="hint">Chọn 1 ca ở “Tick nhanh” rồi bấm vào ô để tick / bỏ tick. Một ô tick nhiều ca = bạn đó đi ca nào trong số đó cũng được. Ô <b>tự do</b> = để máy tự xếp. Lịch cố định (Quang, Khang, Thùy…) đã được nạp sẵn. Dòng cuối hiện số người đã đăng ký OFF so với mức tối đa của ngày.</p>
   <div class="tablewrap"><table id="regTable"></table></div>
   <div class="legend" id="legend"></div>
 </section>
@@ -152,7 +156,7 @@ input[type=number]{width:80px}
 const SH=['AM','C','C1','C2','PM','OFF'];
 const TIMES={AM:'8h–16h30',C:'9h–21h',C1:'10h–22h',C2:'11h–23h',PM:'14h30–23h30',OFF:'Nghỉ'};
 const COLORS={AM:'#ffffff',C:'#3fd13f',C1:'#3ad7ea',C2:'#f7943a',PM:'#d5dae1',OFF:'#fff23a'};
-const isM=[1,1,1,1,0,0], isE=[0,1,1,1,1,0], isF=[0,1,1,1,0,0];
+const isM=[1,1,1,1,0,0], isE=[0,1,1,1,1,0], isF=[0,1,1,1,0,0], GRP=[0,1,1,1,2,-1], GRPN=['AM','Full','PM'];
 const SK=[['nuong','Nướng'],['cat','Cắt'],['dapde','Đập đế'],['lambanh','Làm bánh']];
 const ALL=SK.map(s=>s[0]);
 const DN=['MON','TUE','WED','THU','FRI','SAT','SUN'], DV=['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7','CN'];
@@ -160,18 +164,20 @@ const D7=[0,1,2,3,4,5,6];
 const KEY='pizza-sched-v1';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num=v=>(v===''||v==null||isNaN(+v))?null:+v;
 
 function ymd(t){return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')}
 function nextMonday(){const t=new Date();const dow=(t.getDay()+6)%7;t.setDate(t.getDate()-dow+7);return ymd(t)}
 function dayDate(d,y){const t=new Date(state.weekStart+'T00:00:00');if(isNaN(t))return '';t.setDate(t.getDate()+d);return t.getDate()+'/'+(t.getMonth()+1)+(y?'/'+t.getFullYear():'')}
 
 function defaultStaff(){
+  const BAKER={sep:true,c2:true,amMin:1,amMax:2};
   const L=[
     ['Nguyễn Thị Thùy',ALL,{3:'OFF'}],
-    ['Lê Khang',ALL,{3:'OFF'}],
+    ['Lê Khang',ALL,{3:'OFF'},BAKER],
     ['Trần Thị Tuyết Trinh',ALL,{6:'OFF'}],
-    ['Đoàn Minh Quang',ALL,{0:'OFF',1:'PM',6:'AM'}],
-    ['Nguyễn Thanh Trí',ALL],
+    ['Đoàn Minh Quang',ALL,{0:'OFF',1:'PM',6:'AM'},BAKER],
+    ['Nguyễn Thanh Trí',ALL,{},BAKER],
     ['Đặng Hữu Đang',['cat','dapde','lambanh'],{2:'OFF'}],
     ['Nguyễn Thanh Toàn',['nuong','cat'],{6:'OFF'}],
     ['Nguyễn Ngọc Thùy',['cat','dapde','lambanh'],{0:'OFF'}],
@@ -183,22 +189,34 @@ function defaultStaff(){
     ['Đặng Đức',['cat']],
     ['Nguyễn Thị Xuân Mơ',['dapde','lambanh']],
   ];
-  return L.map((x,k)=>({id:'s'+(k+1),name:x[0],skills:x[1].slice(),fixed:{...(x[2]||{})}}));
+  return L.map((x,k)=>{const o=x[3]||{};return{id:'s'+(k+1),name:x[0],skills:x[1].slice(),fixed:{...(x[2]||{})},sep:!!o.sep,c2:!!o.c2,amMin:o.amMin??'',amMax:o.amMax??''}});
 }
 function regFrom(staff){const r={};staff.forEach(p=>{r[p.id]=D7.map(d=>p.fixed[d]?[p.fixed[d]]:[])});return r}
-function defaultSettings(){return{tAM:4,tC:1,tC1:2,tC2:2,tPM:4,minM:9,minE:9,offWeek:1,sk:{nuong:1,cat:1,dapde:1,lambanh:1},clopen:true}}
+function defaultSettings(){return{
+  amMin:4,amMax:5,
+  perDay:D7.map(d=>({C:1,C1:d===6?1:2,C2:d===6?3:2,PM:4,maxOff:[2,4,6].includes(d)?2:''})),
+  fullMin:2,fullMax:3,minM:9,minE:9,offWeek:1,
+  sk:{nuong:1,cat:1,dapde:1,lambanh:1},clopen:true}}
 function defaultExtras(){return[
-  {name:'Sang',days:['8H-15H','8H-15H','8H-15H','OFF','8H-15H','8H-15H','8H-15H']},
-  {name:'C. Đào',days:['8H-11H','8H-11H','8H-11H','OFF','8H-11H','8H-11H','8H-11H']}]}
+  {name:'Sang',morning:true,days:['8H-15H','8H-15H','8H-15H','OFF','8H-15H','8H-15H','8H-15H']},
+  {name:'C. Đào',morning:false,days:['8H-11H','8H-11H','8H-11H','OFF','8H-11H','8H-11H','8H-11H']}]}
 function defaultState(){const staff=defaultStaff();return{weekStart:nextMonday(),staff,reg:regFrom(staff),result:null,locks:{},settings:defaultSettings(),extras:defaultExtras()}}
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&Array.isArray(s.staff))return s}catch(e){}return null}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
 
 let state=load()||defaultState();
-state.settings={...defaultSettings(),...(state.settings||{}),sk:{...defaultSettings().sk,...((state.settings||{}).sk||{})}};
-if(!state.extras)state.extras=defaultExtras();
-if(!state.locks)state.locks={};
-if(!state.reg)state.reg={};
+(function migrate(){
+  const DS=defaultSettings();
+  state.settings={...DS,...(state.settings||{})};
+  if(!Array.isArray(state.settings.perDay)||state.settings.perDay.length!==7)state.settings.perDay=DS.perDay;
+  state.settings.sk={...DS.sk,...(state.settings.sk||{})};
+  ['tAM','tC','tC1','tC2','tPM'].forEach(k=>delete state.settings[k]);
+  const DEF=defaultStaff();
+  state.staff.forEach(p=>{if(p.sep===undefined){const m=DEF.find(x=>x.name===p.name)||{};p.sep=!!m.sep;p.c2=!!m.c2;p.amMin=m.amMin??'';p.amMax=m.amMax??''}});
+  if(!state.extras)state.extras=defaultExtras();
+  state.extras.forEach(e=>{if(e.morning===undefined)e.morning=e.name.trim()==='Sang'});
+  if(!state.locks)state.locks={};if(!state.reg)state.reg={};
+})();
 function ensure(){state.staff.forEach(p=>{
   if(!state.reg[p.id])state.reg[p.id]=D7.map(()=>[]);
   if(state.result&&!state.result[p.id])state.result[p.id]=D7.map(()=>'OFF');
@@ -208,10 +226,13 @@ ensure();
 let brush='OFF', tab='reg', lastCanvas=null;
 
 const chip=v=>`<span class="chip s-${v}">${v}</span>`;
-function skBadges(p){if(ALL.every(k=>p.skills.includes(k)))return '<span class="b full">Full skill</span>';
-  return SK.filter(k=>p.skills.includes(k[0])).map(k=>`<span class="b">${k[1]}</span>`).join('')||'<span class="b" style="color:#b91c1c">Chưa có skill</span>'}
+function skBadges(p){let h=ALL.every(k=>p.skills.includes(k))?'<span class="b full">Full skill</span>':
+  (SK.filter(k=>p.skills.includes(k[0])).map(k=>`<span class="b">${k[1]}</span>`).join('')||'<span class="b" style="color:#b91c1c">Chưa có skill</span>');
+  if(p.sep)h+='<span class="b sep">Nướng chính</span>';return h}
 function headRow(extra){return `<thead><tr><th class="name">Nhân viên</th>${D7.map(d=>`<th>${DV[d]}<small>${dayDate(d)}</small></th>`).join('')}${extra||''}</tr></thead>`}
 function offTarget(p){let f=0;D7.forEach(d=>{const r=state.reg[p.id][d];if(r.length===1&&r[0]==='OFF')f++});return Math.max(state.settings.offWeek,f)}
+function extraMorning(d){return state.extras.filter(e=>{const t=(e.days[d]||'').trim();return e.morning&&t&&!/^off$/i.test(t)}).length}
+function fullTarget(d){const p=state.settings.perDay[d];return(+p.C||0)+(+p.C1||0)+(+p.C2||0)}
 
 /* ---------- RENDER ---------- */
 function render(){
@@ -230,28 +251,38 @@ function renderReg(){
   h+='<tbody>'+state.staff.map(p=>`<tr><td class="name">${esc(p.name)}<div class="sk">${skBadges(p)}</div></td>${D7.map(d=>{const r=state.reg[p.id][d];
     return `<td class="rc" data-id="${p.id}" data-d="${d}">${r.length?SH.filter(s=>r.includes(s)).map(chip).join(''):'<span class="free">tự do</span>'}</td>`}).join('')}</tr>`).join('')+'</tbody>';
   const offC=D7.map(d=>state.staff.filter(p=>{const r=state.reg[p.id][d];return r.length===1&&r[0]==='OFF'}).length);
-  h+=`<tfoot><tr><td class="name">Đã đăng ký OFF</td>${offC.map(c=>`<td class="${c>3?'bad':''}">${c}</td>`).join('')}</tr></tfoot>`;
+  h+=`<tfoot><tr><td class="name">Đã đăng ký OFF <small>(tối đa)</small></td>${offC.map((c,d)=>{const m=num(state.settings.perDay[d].maxOff);return `<td class="${m!=null&&c>m?'bad':''}">${c}${m!=null?` <small style="color:#6b7280">/ ${m}</small>`:''}</td>`}).join('')}</tr></tfoot>`;
   $('#regTable').innerHTML=h;
   $('#legend').innerHTML=SH.filter(s=>s!=='OFF').map(s=>`<span>${chip(s)} ${TIMES[s]}</span>`).join('')+`<span>${chip('OFF')} Nghỉ</span>`;
 }
 function analyze(){
-  const s=state.settings,fullT=s.tC+s.tC1+s.tC2,days=[],warn=[],person={};
+  const s=state.settings,days=[],warn=[],person={};
+  const sepStaff=state.staff.filter(p=>p.sep);
   D7.forEach(d=>{
-    const cnt={AM:0,C:0,C1:0,C2:0,PM:0,OFF:0},sm={},se={};ALL.forEach(k=>{sm[k]=0;se[k]=0});
+    const pd=s.perDay[d],cnt={AM:0,C:0,C1:0,C2:0,PM:0,OFF:0},sm={},se={};ALL.forEach(k=>{sm[k]=0;se[k]=0});
     state.staff.forEach(p=>{const v=state.result[p.id][d];cnt[v]++;const i=SH.indexOf(v);p.skills.forEach(k=>{if(isM[i])sm[k]++;if(isE[i])se[k]++})});
-    const morning=cnt.AM+cnt.C+cnt.C1+cnt.C2,evening=cnt.PM+cnt.C+cnt.C1+cnt.C2,full=cnt.C+cnt.C1+cnt.C2;
+    const ex=extraMorning(d),morning=cnt.AM+cnt.C+cnt.C1+cnt.C2+ex,evening=cnt.PM+cnt.C+cnt.C1+cnt.C2,full=cnt.C+cnt.C1+cnt.C2;
     const missM=SK.filter(k=>sm[k[0]]<(s.sk[k[0]]||0)).map(k=>k[1]),missE=SK.filter(k=>se[k[0]]<(s.sk[k[0]]||0)).map(k=>k[1]);
-    days.push({cnt,morning,evening,full,missM,missE});
+    const maxOff=num(pd.maxOff);
+    days.push({cnt,morning,evening,full,missM,missE,ex,maxOff});
     if(morning<s.minM)warn.push(['err',`${DV[d]}: ca sáng chỉ có ${morning}/${s.minM} người`]);
     if(evening<s.minE)warn.push(['err',`${DV[d]}: ca tối chỉ có ${evening}/${s.minE} người`]);
     if(missM.length)warn.push(['err',`${DV[d]}: ca sáng thiếu kỹ năng ${missM.join(', ')}`]);
     if(missE.length)warn.push(['err',`${DV[d]}: ca tối thiếu kỹ năng ${missE.join(', ')}`]);
-    if(cnt.AM!==s.tAM||full!==fullT||cnt.PM!==s.tPM)warn.push(['info',`${DV[d]}: ${cnt.AM} AM · ${full} Full · ${cnt.PM} PM (mục tiêu ${s.tAM}/${fullT}/${s.tPM})`]);
+    if(maxOff!=null&&cnt.OFF>maxOff)warn.push(['err',`${DV[d]}: ${cnt.OFF} người off (tối đa ${maxOff})`]);
+    const g={0:[],1:[],2:[]};sepStaff.forEach(p=>{const k=GRP[SH.indexOf(state.result[p.id][d])];if(k>=0)g[k].push(p.name.split(' ').pop())});
+    [0,1,2].forEach(k=>{if(g[k].length>1)warn.push(['err',`${DV[d]}: ${g[k].join(' & ')} cùng ca ${GRPN[k]} (nhóm nướng chính phải tách ca)`])});
+    const fT=fullTarget(d);
+    if(cnt.AM<s.amMin||cnt.AM>s.amMax||full!==fT||cnt.PM!==+pd.PM||cnt.C!==+pd.C||cnt.C1!==+pd.C1||cnt.C2!==+pd.C2)
+      warn.push(['info',`${DV[d]}: ${cnt.AM} AM · ${full} Full (${cnt.C}C/${cnt.C1}C1/${cnt.C2}C2) · ${cnt.PM} PM — mục tiêu ${s.amMin}-${s.amMax} AM · ${fT} Full (${pd.C}/${pd.C1}/${pd.C2}) · ${pd.PM} PM`]);
   });
   state.staff.forEach(p=>{
-    const r=state.result[p.id];const off=r.filter(v=>v==='OFF').length,full=r.filter(v=>isF[SH.indexOf(v)]).length;
-    person[p.id]={off,full};const t=offTarget(p);
+    const r=state.result[p.id];const off=r.filter(v=>v==='OFF').length,full=r.filter(v=>isF[SH.indexOf(v)]).length,am=r.filter(v=>v==='AM').length;
+    person[p.id]={off,full,am};const t=offTarget(p);
     if(off!==t)warn.push(['warn',`${p.name}: ${off} ngày off (mục tiêu ${t})`]);
+    if(full<s.fullMin||full>s.fullMax)warn.push(['warn',`${p.name}: ${full} ca Full/tuần (yêu cầu ${s.fullMin}–${s.fullMax})`]);
+    const a1=num(p.amMin),a2=num(p.amMax);
+    if((a1!=null&&am<a1)||(a2!=null&&am>a2))warn.push(['warn',`${p.name}: ${am} ca AM/tuần (yêu cầu ${a1??0}–${a2??'∞'})`]);
     D7.forEach(d=>{
       const g=state.reg[p.id][d];if(g.length&&!g.includes(r[d]))warn.push(['warn',`${p.name} – ${DV[d]}: xếp ${r[d]}, khác đăng ký (${g.join('/')})`]);
       if(s.clopen&&d<6&&(r[d]==='PM'||r[d]==='C2')&&r[d+1]==='AM')warn.push(['warn',`${p.name}: ${r[d]} ${DV[d]} rồi AM ${DV[d+1]} (đóng ca muộn → mở ca sớm)`]);
@@ -265,43 +296,50 @@ function renderRes(){
   if(!has){$('#warnings').innerHTML='';return}
   ensure();
   const A=analyze(),s=state.settings;
-  let h=headRow('<th>Off</th><th>Full</th>')+'<tbody>';
+  let h=headRow('<th>Off</th><th>Full</th><th>AM</th>')+'<tbody>';
   state.staff.forEach(p=>{
     h+=`<tr><td class="name">${esc(p.name)}<div class="sk">${skBadges(p)}</div></td>`;
     D7.forEach(d=>{const v=state.result[p.id][d],lk=state.locks[p.id][d],g=state.reg[p.id][d],mm=g.length&&!g.includes(v);
       h+=`<td class="cell s-${v} ${mm?'mism':''}" title="${esc(TIMES[v])}${mm?' · khác đăng ký':''}"><select data-id="${p.id}" data-d="${d}">${SH.map(o=>`<option${o===v?' selected':''}>${o}</option>`).join('')}</select>${lk?`<button class="lock" data-id="${p.id}" data-d="${d}" title="Bỏ khoá">🔒</button>`:''}</td>`});
-    const ps=A.person[p.id];h+=`<td class="${ps.off!==offTarget(p)?'bad':''}">${ps.off}</td><td>${ps.full}</td></tr>`;
+    const ps=A.person[p.id],a1=num(p.amMin),a2=num(p.amMax);
+    h+=`<td class="${ps.off!==offTarget(p)?'bad':''}">${ps.off}</td><td class="${ps.full<s.fullMin||ps.full>s.fullMax?'bad':''}">${ps.full}</td><td class="${(a1!=null&&ps.am<a1)||(a2!=null&&ps.am>a2)?'bad':''}">${ps.am}</td></tr>`;
   });
   h+='</tbody><tfoot>';
-  const fullT=s.tC+s.tC1+s.tC2;
-  const row=(lab,f)=>`<tr><td class="name">${lab}</td>${A.days.map(f).join('')}<td></td><td></td></tr>`;
-  h+=row(`AM <small>(mục tiêu ${s.tAM})</small>`,x=>`<td>${x.cnt.AM}</td>`);
-  h+=row(`Full C/C1/C2 <small>(mục tiêu ${fullT})</small>`,x=>`<td>${x.full} <small style="color:#6b7280">(${x.cnt.C}/${x.cnt.C1}/${x.cnt.C2})</small></td>`);
-  h+=row(`PM <small>(mục tiêu ${s.tPM})</small>`,x=>`<td>${x.cnt.PM}</td>`);
-  h+=row('OFF',x=>`<td>${x.cnt.OFF}</td>`);
-  h+=row(`Ca sáng <small>(≥${s.minM})</small>`,x=>`<td class="${x.morning<s.minM?'bad':'good'}">${x.morning}${x.missM.length?`<span class="miss">thiếu ${x.missM.join(', ')}</span>`:''}</td>`);
-  h+=row(`Ca tối <small>(≥${s.minE})</small>`,x=>`<td class="${x.evening<s.minE?'bad':'good'}">${x.evening}${x.missE.length?`<span class="miss">thiếu ${x.missE.join(', ')}</span>`:''}</td>`);
+  const row=(lab,f)=>`<tr><td class="name">${lab}</td>${A.days.map(f).join('')}<td></td><td></td><td></td></tr>`;
+  const sm=t=>`<small style="color:#6b7280">${t}</small>`;
+  h+=row(`AM ${sm(`(${s.amMin}–${s.amMax})`)}`,x=>`<td class="${x.cnt.AM<s.amMin||x.cnt.AM>s.amMax?'bad':''}">${x.cnt.AM}</td>`);
+  h+=row('Full C/C1/C2',(x,d)=>`<td>${x.full} ${sm(`(${x.cnt.C}/${x.cnt.C1}/${x.cnt.C2})`)}</td>`);
+  h+=row('PM',x=>`<td>${x.cnt.PM}</td>`);
+  h+=row(`OFF ${sm('(tối đa)')}`,x=>`<td class="${x.maxOff!=null&&x.cnt.OFF>x.maxOff?'bad':''}">${x.cnt.OFF}${x.maxOff!=null?' '+sm('/ '+x.maxOff):''}</td>`);
+  h+=row(`Ca sáng ${sm(`(≥${s.minM}, gồm phụ)`)}`,x=>`<td class="${x.morning<s.minM?'bad':'good'}">${x.morning}${x.ex?' '+sm(`(+${x.ex} phụ)`):''}${x.missM.length?`<span class="miss">thiếu ${x.missM.join(', ')}</span>`:''}</td>`);
+  h+=row(`Ca tối ${sm(`(≥${s.minE})`)}`,x=>`<td class="${x.evening<s.minE?'bad':'good'}">${x.evening}${x.missE.length?`<span class="miss">thiếu ${x.missE.join(', ')}</span>`:''}</td>`);
   h+='</tfoot>';
   $('#resTable').innerHTML=h;
   const serious=A.warn.filter(w=>w[0]!=='info');
-  $('#warnings').innerHTML=(serious.length?'':`<div class="w ok">✅ Đạt đủ người tối thiểu, đủ kỹ năng mỗi ca, đúng số ngày off.</div>`)+
+  $('#warnings').innerHTML=(serious.length?'':`<div class="w ok">✅ Đạt tất cả tiêu chí bắt buộc: đủ người, đủ kỹ năng, số off, nhóm nướng chính tách ca, số ca Full/AM mỗi người.</div>`)+
     A.warn.map(w=>`<div class="w ${w[0]}">${w[0]==='err'?'⛔ ':w[0]==='warn'?'⚠️ ':'ℹ️ '}${esc(w[1])}</div>`).join('');
 }
 function renderExtras(){
-  $('#extraTable').innerHTML=headRow('<th></th>')+'<tbody>'+state.extras.map((e,i)=>`<tr><td class="name"><input type="text" data-i="${i}" data-f="name" value="${esc(e.name)}"></td>${D7.map(d=>`<td><input type="text" data-i="${i}" data-d="${d}" value="${esc(e.days[d]||'')}"></td>`).join('')}<td><button class="small ghost xdel" data-i="${i}">✕</button></td></tr>`).join('')+'</tbody>';
+  $('#extraTable').innerHTML=headRow('<th>Tính ca sáng</th><th></th>')+'<tbody>'+state.extras.map((e,i)=>`<tr><td class="name"><input type="text" data-i="${i}" data-f="name" value="${esc(e.name)}"></td>${D7.map(d=>`<td><input type="text" data-i="${i}" data-d="${d}" value="${esc(e.days[d]||'')}"></td>`).join('')}<td><input type="checkbox" data-i="${i}" data-f="morning"${e.morning?' checked':''}></td><td><button class="small ghost xdel" data-i="${i}">✕</button></td></tr>`).join('')+'</tbody>';
 }
 function renderStaff(){
-  let h=`<thead><tr><th class="name">Họ tên</th>${SK.map(k=>`<th>${k[1]}</th>`).join('')}${DV.map(d=>`<th>Cố định<small>${d}</small></th>`).join('')}<th></th></tr></thead><tbody>`;
-  h+=state.staff.map(p=>`<tr data-id="${p.id}"><td class="name"><input class="nm" value="${esc(p.name)}"></td>${SK.map(k=>`<td><input type="checkbox" class="skc" data-k="${k[0]}"${p.skills.includes(k[0])?' checked':''}></td>`).join('')}${D7.map(d=>`<td><select class="fx" data-d="${d}"><option value="">—</option>${SH.map(o=>`<option${p.fixed[d]===o?' selected':''}>${o}</option>`).join('')}</select></td>`).join('')}<td><button class="del ghost small">Xoá</button></td></tr>`).join('')+'</tbody>';
+  let h=`<thead><tr><th class="name">Họ tên</th>${SK.map(k=>`<th>${k[1]}</th>`).join('')}<th>Nướng chính<small>tách ca</small></th><th>Ưu tiên<small>C2</small></th><th>AM/tuần<small>tối thiểu</small></th><th>AM/tuần<small>tối đa</small></th>${DV.map(d=>`<th>Cố định<small>${d}</small></th>`).join('')}<th></th></tr></thead><tbody>`;
+  h+=state.staff.map(p=>`<tr data-id="${p.id}"><td class="name"><input class="nm" value="${esc(p.name)}"></td>${SK.map(k=>`<td><input type="checkbox" class="skc" data-k="${k[0]}"${p.skills.includes(k[0])?' checked':''}></td>`).join('')}
+    <td><input type="checkbox" class="pf" data-f="sep"${p.sep?' checked':''}></td><td><input type="checkbox" class="pf" data-f="c2"${p.c2?' checked':''}></td>
+    <td><input type="number" class="pn" data-f="amMin" min="0" max="7" value="${p.amMin??''}" style="width:56px"></td><td><input type="number" class="pn" data-f="amMax" min="0" max="7" value="${p.amMax??''}" style="width:56px"></td>
+    ${D7.map(d=>`<td><select class="fx" data-d="${d}"><option value="">—</option>${SH.map(o=>`<option${p.fixed[d]===o?' selected':''}>${o}</option>`).join('')}</select></td>`).join('')}<td><button class="del ghost small">Xoá</button></td></tr>`).join('')+'</tbody>';
   $('#staffTable').innerHTML=h;
 }
 function renderSettings(){
   const s=state.settings;
-  const num=(k,lab,v)=>`<div class="row"><span>${lab}</span><input type="number" min="0" max="30" data-k="${k}" value="${v}"></div>`;
+  const n=(k,lab,v,mx)=>`<div class="row"><span>${lab}</span><input type="number" min="0" max="${mx||30}" data-k="${k}" value="${v}"></div>`;
+  const pdRow=(f,lab)=>`<tr><td class="name">${lab}</td>${D7.map(d=>`<td><input type="number" min="0" max="15" data-pd="${d}" data-f="${f}" value="${s.perDay[d][f]??''}" style="width:60px"${f==='maxOff'?' placeholder="—"':''}></td>`).join('')}</tr>`;
   $('#settings').innerHTML=
-   `<div class="card"><h4>Số người mỗi ca / ngày (mục tiêu)</h4>${num('tAM','AM (8h–16h30)',s.tAM)}${num('tC','C (9h–21h)',s.tC)}${num('tC1','C1 (10h–22h)',s.tC1)}${num('tC2','C2 (11h–23h)',s.tC2)}${num('tPM','PM (14h30–23h30)',s.tPM)}</div>`+
-   `<div class="card"><h4>Tối thiểu (bắt buộc)</h4>${num('minM','Người ca sáng (AM + Full)',s.minM)}${num('minE','Người ca tối (PM + Full)',s.minE)}${num('offWeek','Số ngày off / người / tuần',s.offWeek)}</div>`+
-   `<div class="card"><h4>Kỹ năng tối thiểu mỗi ca sáng / tối</h4>${SK.map(k=>num('sk.'+k[0],k[1],s.sk[k[0]])).join('')}</div>`+
+   `<div class="card wide"><h4>Mục tiêu theo từng ngày</h4><div style="overflow-x:auto"><table class="pd"><thead><tr><th class="name"></th>${DV.map(d=>`<th>${d}</th>`).join('')}</tr></thead><tbody>
+     ${pdRow('C','C (9h–21h)')}${pdRow('C1','C1 (10h–22h)')}${pdRow('C2','C2 (11h–23h)')}${pdRow('PM','PM (14h30–23h30)')}${pdRow('maxOff','OFF tối đa <small>(trống = không giới hạn)</small>')}</tbody></table></div></div>`+
+   `<div class="card"><h4>Số người mỗi ngày</h4>${n('amMin','AM tối thiểu',s.amMin)}${n('amMax','AM tối đa',s.amMax)}${n('minM','Ca sáng tối thiểu (AM + Full + phụ)',s.minM)}${n('minE','Ca tối tối thiểu (PM + Full)',s.minE)}</div>`+
+   `<div class="card"><h4>Mỗi người / tuần</h4>${n('fullMin','Ca Full (C/C1/C2) tối thiểu',s.fullMin,7)}${n('fullMax','Ca Full (C/C1/C2) tối đa',s.fullMax,7)}${n('offWeek','Số ngày off',s.offWeek,7)}<p class="hint">Số AM/tuần riêng từng bạn, ưu tiên C2, nhóm nướng chính: chỉnh ở tab Nhân viên.</p></div>`+
+   `<div class="card"><h4>Kỹ năng tối thiểu mỗi ca sáng / tối</h4>${SK.map(k=>n('sk.'+k[0],k[1],s.sk[k[0]])).join('')}</div>`+
    `<div class="card"><h4>Khác</h4><div class="row"><span>Tránh PM/C2 hôm trước rồi AM hôm sau</span><input type="checkbox" data-k="clopen"${s.clopen?' checked':''}></div><div class="row"><button id="btnResetSet" class="ghost small">Khôi phục mặc định</button></div></div>`;
 }
 
@@ -316,25 +354,36 @@ function solve(keep){
       let idx=set.map(x=>SH.indexOf(x)).filter(x=>x>=0);if(!idx.length)idx=[0,1,2,3,4,5];
       allowL[i][d]=idx;allowM[i][d]=idx.reduce((m,x)=>m|(1<<x),0)}}
   const skm=st.map(p=>SK.reduce((m,k,j)=>p.skills.includes(k[0])?m|(1<<j):m,0));
+  const sep=st.map(p=>!!p.sep),c2p=st.map(p=>!!p.c2),aMin=st.map(p=>num(p.amMin)),aMax=st.map(p=>num(p.amMax));
   const offT=st.map((p,i)=>{let f=0;for(let d=0;d<D;d++)if(allowL[i][d].length===1&&allowL[i][d][0]===5)f++;return Math.max(s.offWeek,f)});
-  const fullT=s.tC+s.tC1+s.tC2,skMin=SK.map(k=>s.sk[k[0]]||0);
-  const avgF=st.map((p,i)=>Math.min(D-offT[i],fullT*D/n));
-  const cnt=new Int32Array(6),sm=new Int32Array(4),se=new Int32Array(4);
-  function dayCost(a,d){cnt.fill(0);sm.fill(0);se.fill(0);
+  const PD=s.perDay.map(p=>({C:+p.C||0,C1:+p.C1||0,C2:+p.C2||0,PM:+p.PM||0,F:(+p.C||0)+(+p.C1||0)+(+p.C2||0),mo:num(p.maxOff)}));
+  const amAvg=Math.min(5,(s.amMin+s.amMax)/2*D/n);
+  const exM=D7.map(extraMorning),skMin=SK.map(k=>s.sk[k[0]]||0);
+  const cnt=new Int32Array(6),sm=new Int32Array(4),se=new Int32Array(4),cg=new Int32Array(3);
+  function dayCost(a,d){cnt.fill(0);sm.fill(0);se.fill(0);cg.fill(0);
     for(let i=0;i<n;i++){const v=a[i][d],m=skm[i];cnt[v]++;
       if(isM[v])for(let k=0;k<4;k++)if(m>>k&1)sm[k]++;
-      if(isE[v])for(let k=0;k<4;k++)if(m>>k&1)se[k]++}
-    const mo=cnt[0]+cnt[1]+cnt[2]+cnt[3],ev=cnt[1]+cnt[2]+cnt[3]+cnt[4],fu=cnt[1]+cnt[2]+cnt[3];
+      if(isE[v])for(let k=0;k<4;k++)if(m>>k&1)se[k]++;
+      if(sep[i]&&v!==5)cg[GRP[v]]++}
+    const pd=PD[d],mo=cnt[0]+cnt[1]+cnt[2]+cnt[3]+exM[d],ev=cnt[1]+cnt[2]+cnt[3]+cnt[4],fu=cnt[1]+cnt[2]+cnt[3];
     let c=1000*Math.max(0,s.minM-mo)+1000*Math.max(0,s.minE-ev);
-    c+=25*Math.abs(fu-fullT)+12*(Math.abs(cnt[0]-s.tAM)+Math.abs(cnt[4]-s.tPM))+6*(Math.abs(cnt[1]-s.tC)+Math.abs(cnt[2]-s.tC1)+Math.abs(cnt[3]-s.tC2));
+    c+=15*(Math.max(0,s.amMin-cnt[0])+Math.max(0,cnt[0]-s.amMax));
+    c+=25*Math.abs(fu-pd.F)+12*Math.abs(cnt[4]-pd.PM)+6*(Math.abs(cnt[1]-pd.C)+Math.abs(cnt[2]-pd.C1)+Math.abs(cnt[3]-pd.C2));
+    if(pd.mo!=null)c+=800*Math.max(0,cnt[5]-pd.mo);
+    for(let k=0;k<3;k++)if(cg[k]>1)c+=700*(cg[k]-1);
     for(let k=0;k<4;k++){c+=600*Math.max(0,skMin[k]-sm[k])+600*Math.max(0,skMin[k]-se[k]);
       if(skMin[k])c+=4*Math.max(0,skMin[k]+1-sm[k])+4*Math.max(0,skMin[k]+1-se[k])}
     return c}
-  function perCost(a,i){const r=a[i];let off=0,fu=0,c=0;
-    for(let d=0;d<D;d++){const v=r[d];if(v===5)off++;else if(isF[v])fu++;
+  function perCost(a,i){const r=a[i];let off=0,fu=0,am=0,c=0;
+    for(let d=0;d<D;d++){const v=r[d];if(v===5)off++;else if(isF[v]){fu++;if(c2p[i]&&v!==3)c+=10}else if(v===0)am++;
       if(s.clopen&&d<D-1&&(v===4||v===3)&&r[d+1]===0)c+=40}
-    c+=300*Math.abs(off-offT[i]);const x=fu-avgF[i];return c+3*x*x}
-  let best=null,bestC=Infinity;const R=4,IT=150000,T0=400,T1=0.2;
+    c+=300*Math.abs(off-offT[i]);
+    c+=200*(Math.max(0,s.fullMin-fu)+Math.max(0,fu-s.fullMax));
+    if(aMin[i]!=null)c+=200*Math.max(0,aMin[i]-am);
+    if(aMax[i]!=null)c+=200*Math.max(0,am-aMax[i]);
+    if(aMin[i]==null&&aMax[i]==null){const x=am-amAvg;c+=6*x*x}
+    return c}
+  let best=null,bestC=Infinity;const R=5,IT=160000,T0=400,T1=0.2;
   for(let r=0;r<R;r++){
     const a=[];for(let i=0;i<n;i++){a[i]=[];for(let d=0;d<D;d++){const L=allowL[i][d];a[i][d]=L[Math.random()*L.length|0]}}
     const dc=[],pc=[];for(let d=0;d<D;d++)dc[d]=dayCost(a,d);for(let i=0;i<n;i++)pc[i]=perCost(a,i);
@@ -410,21 +459,26 @@ $('#copyImg').onclick=()=>{try{const item=new ClipboardItem({'image/png':new Pro
   navigator.clipboard.write([item]).then(()=>$('#copyMsg').textContent='Đã copy ảnh ✓').catch(()=>$('#copyMsg').textContent='Trình duyệt chặn copy – hãy lưu ảnh thủ công.')}catch(e){$('#copyMsg').textContent='Trình duyệt chặn copy – hãy lưu ảnh thủ công.'}};
 $('#resTable').onchange=e=>{const s=e.target.closest('select');if(!s)return;const id=s.dataset.id,d=+s.dataset.d;state.result[id][d]=s.value;state.locks[id][d]=true;save();renderRes()};
 $('#resTable').onclick=e=>{const b=e.target.closest('.lock');if(!b)return;state.locks[b.dataset.id][+b.dataset.d]=false;save();renderRes()};
-$('#extraTable').onchange=e=>{const t=e.target;if(t.dataset.i==null)return;const x=state.extras[+t.dataset.i];if(t.dataset.f==='name')x.name=t.value;else x.days[+t.dataset.d]=t.value;save()};
-$('#extraTable').onclick=e=>{const b=e.target.closest('.xdel');if(!b)return;state.extras.splice(+b.dataset.i,1);save();renderExtras()};
-$('#btnAddExtra').onclick=()=>{state.extras.push({name:'',days:D7.map(()=>'')});save();renderExtras()};
+$('#extraTable').onchange=e=>{const t=e.target;if(t.dataset.i==null)return;const x=state.extras[+t.dataset.i];
+  if(t.dataset.f==='name')x.name=t.value;else if(t.dataset.f==='morning')x.morning=t.checked;else x.days[+t.dataset.d]=t.value;save();if(state.result)renderRes()};
+$('#extraTable').onclick=e=>{const b=e.target.closest('.xdel');if(!b)return;state.extras.splice(+b.dataset.i,1);save();renderRes()};
+$('#btnAddExtra').onclick=()=>{state.extras.push({name:'',morning:false,days:D7.map(()=>'')});save();renderExtras()};
 $('#staffTable').onchange=e=>{const tr=e.target.closest('tr[data-id]');if(!tr)return;const p=state.staff.find(x=>x.id===tr.dataset.id),t=e.target;
   if(t.classList.contains('nm'))p.name=t.value.trim()||p.name;
   else if(t.classList.contains('skc')){p.skills=t.checked?[...new Set([...p.skills,t.dataset.k])]:p.skills.filter(k=>k!==t.dataset.k)}
+  else if(t.classList.contains('pf'))p[t.dataset.f]=t.checked;
+  else if(t.classList.contains('pn'))p[t.dataset.f]=t.value===''?'':Math.max(0,parseInt(t.value)||0);
   else if(t.classList.contains('fx')){const d=+t.dataset.d;if(t.value)p.fixed[d]=t.value;else delete p.fixed[d];state.reg[p.id][d]=t.value?[t.value]:[]}
   save()};
 $('#staffTable').onclick=e=>{const b=e.target.closest('.del');if(!b)return;
   if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Chắc chắn?';b.style.color='#b91c1c';return}
   const id=b.closest('tr').dataset.id;state.staff=state.staff.filter(p=>p.id!==id);delete state.reg[id];if(state.result)delete state.result[id];delete state.locks[id];save();renderStaff()};
-$('#btnAdd').onclick=()=>{const n=$('#newName').value.trim();if(!n)return;const id='s'+Date.now();state.staff.push({id,name:n,skills:[],fixed:{}});ensure();$('#newName').value='';save();renderStaff()};
+$('#btnAdd').onclick=()=>{const n=$('#newName').value.trim();if(!n)return;const id='s'+Date.now();state.staff.push({id,name:n,skills:[],fixed:{},sep:false,c2:false,amMin:'',amMax:''});ensure();$('#newName').value='';save();renderStaff()};
 $('#btnResetStaff').onclick=e=>{const b=e.target;if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Bấm lần nữa để khôi phục';return}
   state.staff=defaultStaff();state.reg=regFrom(state.staff);state.result=null;state.locks={};ensure();save();b.dataset.armed='';b.textContent='Khôi phục danh sách mặc định';renderStaff()};
-$('#settings').onchange=e=>{const t=e.target,k=t.dataset.k;if(!k)return;const s=state.settings;
+$('#settings').onchange=e=>{const t=e.target,s=state.settings;
+  if(t.dataset.pd!=null){const d=+t.dataset.pd,f=t.dataset.f;s.perDay[d][f]=t.value===''?(f==='maxOff'?'':0):Math.max(0,parseInt(t.value)||0);save();return}
+  const k=t.dataset.k;if(!k)return;
   if(k==='clopen')s.clopen=t.checked;else{const v=Math.max(0,parseInt(t.value)||0);if(k.startsWith('sk.'))s.sk[k.slice(3)]=v;else s[k]=v}save()};
 $('#settings').onclick=e=>{if(e.target.id==='btnResetSet'){state.settings=defaultSettings();save();renderSettings()}};
 render();
