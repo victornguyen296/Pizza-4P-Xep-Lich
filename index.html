@@ -117,9 +117,12 @@ table.pd td,table.pd th{padding:4px}
     <button id="btnUnlock" class="ghost">Bỏ khoá tất cả</button>
     <button id="btnNextWeek" class="ghost" title="Lưu ca CN tuần này làm 'CN tuần trước', chuyển sang tuần sau, nạp lại lịch cố định">Sang tuần mới ▶</button>
     <span class="spacer"></span>
+    <button id="btnCopySheet" class="ghost" title="Copy bảng lịch (có màu) rồi dán vào Google Sheets">Copy cho Google Sheets</button>
+    <button id="btnXlsx" class="ghost">Tải Excel (.xlsx)</button>
     <button id="btnExport" class="accent">Xuất ảnh PNG</button>
   </div>
   <p class="hint">Đổi ca trực tiếp ở ô → ô đó được khoá 🔒. Bấm “Xếp lại” để máy xếp lại các ô còn lại quanh những ô bạn đã sửa. Bấm vào 🔒 để mở khoá. Ô viền đỏ = khác với đăng ký.</p>
+  <div id="sheetMsg" class="hint" style="color:var(--ok);font-weight:600"></div>
   <div id="resEmpty" class="empty">Chưa có lịch. Qua tab “Đăng ký ca” và bấm <b>Phân lịch</b>.</div>
   <div class="tablewrap" id="resWrap"><table id="resTable"></table></div>
   <div id="warnings"></div>
@@ -194,8 +197,9 @@ function defaultStaff(){
     ['Đặng Đức',['cat']],
     ['Nguyễn Thị Xuân Mơ',['dapde','lambanh']],
   ];
-  return L.map((x,k)=>{const o=x[3]||{};return{id:'s'+(k+1),name:x[0],skills:x[1].slice(),fixed:{...(x[2]||{})},senior:k<8,sep:!!o.sep,c2:!!o.c2,amMin:o.amMin??'',amMax:o.amMax??''}});
+  return L.map((x,k)=>{const o=x[3]||{};return{id:'s'+(k+1),code:CODES[x[0]]||'',name:x[0],skills:x[1].slice(),fixed:{...(x[2]||{})},senior:k<8,sep:!!o.sep,c2:!!o.c2,amMin:o.amMin??'',amMax:o.amMax??''}});
 }
+const CODES={'Nguyễn Thị Thùy':'PZNT0212','Trần Thị Tuyết Trinh':'PZNT0313','Đoàn Minh Quang':'PZNT0321','Nguyễn Thanh Trí':'PZNT0347','Nguyễn Thanh Toàn':'PZNT0483','Nguyễn Ngọc Thùy':'PZNT0546','Nguyễn Minh Tài':'PZNT0850','Đoàn Ngọc Bảo':'PZNT0906','Đặng Uyên Nhi':'PZNT0949','Huỳnh Ngọc Ánh':'PZNT0932','Võ Thị Hoàng Lạc':'PZNT0976','Đặng Đức':'PZNT0978','Nguyễn Thị Xuân Mơ':'PZNT0695'};
 function regFrom(staff){const r={};staff.forEach(p=>{r[p.id]=D7.map(d=>p.fixed[d]?[p.fixed[d]]:[])});return r}
 function defaultSettings(){return{
   amMin:4,amMax:5,
@@ -219,6 +223,7 @@ let state=load()||defaultState();
   ['tAM','tC','tC1','tC2','tPM'].forEach(k=>delete state.settings[k]);
   const DEF=defaultStaff();
   state.staff.forEach(p=>{if(p.sep===undefined){const m=DEF.find(x=>x.name===p.name)||{};p.sep=!!m.sep;p.c2=!!m.c2;p.amMin=m.amMin??'';p.amMax=m.amMax??''}});
+  state.staff.forEach(p=>{if(p.code===undefined)p.code=CODES[p.name]||''});
   state.staff.forEach(p=>{if(p.senior===undefined){const m=DEF.find(x=>x.name===p.name);p.senior=m?m.senior:false}});
   if(!state.extras)state.extras=defaultExtras();
   state.extras.forEach(e=>{if(e.morning===undefined)e.morning=e.name.trim()==='Sang';if(e.cover===undefined)e.cover=/đào/i.test(e.name)});
@@ -303,7 +308,7 @@ function analyze(){
   return{days,warn,person};
 }
 function renderRes(){
-  const has=!!state.result;$('#resEmpty').hidden=has;$('#resWrap').hidden=!has;$('#btnResolve').disabled=!has;$('#btnNextWeek').disabled=!has;$('#btnExport').disabled=!has;
+  const has=!!state.result;$('#resEmpty').hidden=has;$('#resWrap').hidden=!has;$('#btnResolve').disabled=!has;$('#btnCopySheet').disabled=!has;$('#btnXlsx').disabled=!has;$('#btnNextWeek').disabled=!has;$('#btnExport').disabled=!has;
   renderExtras();
   if(!has){$('#warnings').innerHTML='';return}
   ensure();
@@ -336,8 +341,8 @@ function renderExtras(){
   $('#extraTable').innerHTML=headRow('<th>Tính ca sáng</th><th>Off thì<small>bù ca C</small></th><th></th>')+'<tbody>'+state.extras.map((e,i)=>`<tr><td class="name"><input type="text" data-i="${i}" data-f="name" value="${esc(e.name)}"></td>${D7.map(d=>`<td><input type="text" data-i="${i}" data-d="${d}" value="${esc(e.days[d]||'')}"></td>`).join('')}<td><input type="checkbox" data-i="${i}" data-f="morning"${e.morning?' checked':''}></td><td><input type="checkbox" data-i="${i}" data-f="cover"${e.cover?' checked':''}></td><td><button class="small ghost xdel" data-i="${i}">✕</button></td></tr>`).join('')+'</tbody>';
 }
 function renderStaff(){
-  let h=`<thead><tr><th class="name">Họ tên</th>${SK.map(k=>`<th>${k[1]}</th>`).join('')}<th>Người<small>cũ</small></th><th>Nướng chính<small>tách ca</small></th><th>Ưu tiên<small>C2</small></th><th>AM/tuần<small>tối thiểu</small></th><th>AM/tuần<small>tối đa</small></th>${DV.map(d=>`<th>Cố định<small>${d}</small></th>`).join('')}<th></th></tr></thead><tbody>`;
-  h+=state.staff.map(p=>`<tr data-id="${p.id}"><td class="name"><input class="nm" value="${esc(p.name)}"></td>${SK.map(k=>`<td><input type="checkbox" class="skc" data-k="${k[0]}"${p.skills.includes(k[0])?' checked':''}></td>`).join('')}
+  let h=`<thead><tr><th>Mã NV</th><th class="name">Họ tên</th>${SK.map(k=>`<th>${k[1]}</th>`).join('')}<th>Người<small>cũ</small></th><th>Nướng chính<small>tách ca</small></th><th>Ưu tiên<small>C2</small></th><th>AM/tuần<small>tối thiểu</small></th><th>AM/tuần<small>tối đa</small></th>${DV.map(d=>`<th>Cố định<small>${d}</small></th>`).join('')}<th></th></tr></thead><tbody>`;
+  h+=state.staff.map(p=>`<tr data-id="${p.id}"><td><input class="pc" value="${esc(p.code||'')}" style="width:96px"></td><td class="name"><input class="nm" value="${esc(p.name)}"></td>${SK.map(k=>`<td><input type="checkbox" class="skc" data-k="${k[0]}"${p.skills.includes(k[0])?' checked':''}></td>`).join('')}
     <td><input type="checkbox" class="pf" data-f="senior"${p.senior?' checked':''}></td><td><input type="checkbox" class="pf" data-f="sep"${p.sep?' checked':''}></td><td><input type="checkbox" class="pf" data-f="c2"${p.c2?' checked':''}></td>
     <td><input type="number" class="pn" data-f="amMin" min="0" max="7" value="${p.amMin??''}" style="width:56px"></td><td><input type="number" class="pn" data-f="amMax" min="0" max="7" value="${p.amMax??''}" style="width:56px"></td>
     ${D7.map(d=>`<td><select class="fx" data-d="${d}"><option value="">—</option>${SH.map(o=>`<option${p.fixed[d]===o?' selected':''}>${o}</option>`).join('')}</select></td>`).join('')}<td><button class="del ghost small">Xoá</button></td></tr>`).join('')+'</tbody>';
@@ -452,6 +457,53 @@ function drawPNG(){
 }
 function showExport(){lastCanvas=drawPNG();const url=lastCanvas.toDataURL('image/png');$('#pngImg').src=url;const a=$('#dl');a.href=url;a.download=`lich-tuan-${state.weekStart}.png`;$('#copyMsg').textContent='';$('#modal').hidden=false}
 
+/* ---------- SHEET / EXCEL ---------- */
+function sheetRows(){
+  const rows=[];
+  rows.push([{v:'Mã NV',bg:'#a4c2f4'},{v:'EE Name',bg:'#f4b183'},...DN.map(x=>({v:x,bg:'#f4cccc'}))]);
+  rows.push([{v:'',bg:'#a4c2f4'},{v:'',bg:'#f4b183'},...D7.map(d=>({v:dayDate(d),bg:'#f4cccc'}))]);
+  state.staff.forEach(p=>rows.push([{v:p.code||''},{v:p.name,left:1},...D7.map(d=>{const v=state.result[p.id][d];return{v,bg:COLORS[v]}})]));
+  rows.push(null);
+  state.extras.forEach(e=>rows.push([{v:''},{v:e.name,left:1},...D7.map(d=>{const t=e.days[d]||'';return{v:t,bg:/^off$/i.test(t.trim())?COLORS.OFF:'#ffffff'}})]));
+  return rows;
+}
+function sheetMsg(t,bad){const m=$('#sheetMsg');m.textContent=t;m.style.color=bad?'var(--err)':'var(--ok)'}
+function copySheet(){
+  const rows=sheetRows();
+  const td=c=>`<td style="border:1px solid #8f969e;font-weight:bold;font-family:'Times New Roman';text-align:${c.left?'left':'center'};${c.bg?'background-color:'+c.bg+';':''}">${esc(c.v)}</td>`;
+  const html='<meta charset="utf-8"><table style="border-collapse:collapse">'+rows.map(r=>r?`<tr>${r.map(td).join('')}</tr>`:'<tr><td></td></tr>').join('')+'</table>';
+  const text=rows.map(r=>r?r.map(c=>c.v).join('\t'):'').join('\n');
+  const ok=()=>sheetMsg('Đã copy ✓ — mở Google Sheets, bấm vào ô A2 (hoặc ô góc trái) rồi Ctrl+V / ⌘V. Màu ca sẽ được giữ nguyên.');
+  const fallback=()=>{const box=document.createElement('div');box.contentEditable='true';box.style.cssText='position:fixed;left:-9999px;top:0';box.innerHTML=html;document.body.appendChild(box);
+    const r=document.createRange();r.selectNodeContents(box);const sel=getSelection();sel.removeAllRanges();sel.addRange(r);
+    let done=false;try{done=document.execCommand('copy')}catch(e){}sel.removeAllRanges();box.remove();
+    done?ok():sheetMsg('Trình duyệt chặn copy. Hãy dùng nút Tải Excel rồi mở bằng Google Sheets.',true)};
+  try{navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([text],{type:'text/plain'})})]).then(ok).catch(fallback)}catch(e){fallback()}
+}
+function loadExcelJS(){if(window.ExcelJS)return Promise.resolve();return new Promise((res,rej)=>{const sc=document.createElement('script');
+  sc.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';sc.onload=()=>res();sc.onerror=()=>rej(new Error('load'));document.head.appendChild(sc)})}
+async function exportXlsx(){
+  const btn=$('#btnXlsx'),old=btn.textContent;btn.disabled=true;btn.textContent='Đang tạo file…';
+  try{
+    await loadExcelJS();
+    const wb=new ExcelJS.Workbook(),name=`${dayDate(0)}-${dayDate(6)}`.replace(/\//g,'.');
+    const ws=wb.addWorksheet(name);
+    ws.columns=[{width:12},{width:30},...D7.map(()=>({width:11}))];
+    const argb=h=>'FF'+h.replace('#','').toUpperCase(),bd={style:'thin',color:{argb:'FF8F969E'}};
+    sheetRows().forEach((r,ri)=>{const row=ws.getRow(ri+1);if(!r)return;row.height=18;
+      r.forEach((c,ci)=>{const cell=row.getCell(ci+1);cell.value=c.v;cell.font={name:'Times New Roman',bold:true,size:11};
+        cell.alignment={horizontal:c.left?'left':'center',vertical:'middle'};cell.border={top:bd,left:bd,bottom:bd,right:bd};
+        if(c.bg)cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:argb(c.bg)}}})});
+    ws.mergeCells('A1:A2');ws.mergeCells('B1:B2');
+    ws.views=[{state:'frozen',xSplit:2,ySplit:2}];
+    const blob=new Blob([await wb.xlsx.writeBuffer()],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const fn=`lich-tuan-${name}.xlsx`;
+    if(dlNs){try{await dlNs.save({filename:fn,data:blob});sheetMsg('Đã tải file Excel ✓')}catch(err){if(!(err&&err.code==='declined'))sheetMsg('Không tải được file trong trình xem này.',true)}}
+    else{const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=fn;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);sheetMsg('Đã tải file Excel ✓ — trên Google Sheets: Tệp → Nhập → Tải lên → chọn "Chèn trang tính mới".')}
+  }catch(e){sheetMsg('Không tạo được file Excel (cần kết nối mạng để tải thư viện). Hãy dùng nút Copy cho Google Sheets.',true)}
+  finally{btn.disabled=false;btn.textContent=old}
+}
+
 /* ---------- EVENTS ---------- */
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render()});
 $('#weekStart').onchange=e=>{if(e.target.value){state.weekStart=e.target.value;save();render()}};
@@ -465,6 +517,8 @@ $('#btnSolve').onclick=()=>runSolve(false);
 $('#btnResolve').onclick=()=>runSolve(true);
 $('#btnUnlock').onclick=()=>{state.locks={};ensure();save();renderRes()};
 $('#btnExport').onclick=showExport;
+$('#btnCopySheet').onclick=copySheet;
+$('#btnXlsx').onclick=exportXlsx;
 $('#btnNextWeek').onclick=e=>{const b=e.target;if(!state.result)return;if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Bấm lần nữa để sang tuần mới';return}
   b.dataset.armed='';b.textContent='Sang tuần mới ▶';state.prevSun={};state.staff.forEach(p=>{if(state.result[p.id])state.prevSun[p.id]=state.result[p.id][6]});
   const t=new Date(state.weekStart+'T00:00:00');t.setDate(t.getDate()+7);state.weekStart=ymd(t);state.result=null;state.locks={};state.reg=regFrom(state.staff);ensure();save();tab='reg';render()};
@@ -485,6 +539,7 @@ $('#extraTable').onclick=e=>{const b=e.target.closest('.xdel');if(!b)return;stat
 $('#btnAddExtra').onclick=()=>{state.extras.push({name:'',morning:false,cover:false,days:D7.map(()=>'')});save();renderExtras()};
 $('#staffTable').onchange=e=>{const tr=e.target.closest('tr[data-id]');if(!tr)return;const p=state.staff.find(x=>x.id===tr.dataset.id),t=e.target;
   if(t.classList.contains('nm'))p.name=t.value.trim()||p.name;
+  else if(t.classList.contains('pc'))p.code=t.value.trim();
   else if(t.classList.contains('skc')){p.skills=t.checked?[...new Set([...p.skills,t.dataset.k])]:p.skills.filter(k=>k!==t.dataset.k)}
   else if(t.classList.contains('pf'))p[t.dataset.f]=t.checked;
   else if(t.classList.contains('pn'))p[t.dataset.f]=t.value===''?'':Math.max(0,parseInt(t.value)||0);
@@ -493,7 +548,7 @@ $('#staffTable').onchange=e=>{const tr=e.target.closest('tr[data-id]');if(!tr)re
 $('#staffTable').onclick=e=>{const b=e.target.closest('.del');if(!b)return;
   if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Chắc chắn?';b.style.color='#b91c1c';return}
   const id=b.closest('tr').dataset.id;state.staff=state.staff.filter(p=>p.id!==id);delete state.reg[id];if(state.result)delete state.result[id];delete state.locks[id];save();renderStaff()};
-$('#btnAdd').onclick=()=>{const n=$('#newName').value.trim();if(!n)return;const id='s'+Date.now();state.staff.push({id,name:n,skills:[],fixed:{},senior:false,sep:false,c2:false,amMin:'',amMax:''});ensure();$('#newName').value='';save();renderStaff()};
+$('#btnAdd').onclick=()=>{const n=$('#newName').value.trim();if(!n)return;const id='s'+Date.now();state.staff.push({id,code:'',name:n,skills:[],fixed:{},senior:false,sep:false,c2:false,amMin:'',amMax:''});ensure();$('#newName').value='';save();renderStaff()};
 $('#btnResetStaff').onclick=e=>{const b=e.target;if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Bấm lần nữa để khôi phục';return}
   state.staff=defaultStaff();state.reg=regFrom(state.staff);state.result=null;state.locks={};ensure();save();b.dataset.armed='';b.textContent='Khôi phục danh sách mặc định';renderStaff()};
 $('#settings').onchange=e=>{const t=e.target,s=state.settings;
