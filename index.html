@@ -39,7 +39,7 @@ th.name{background:#faf8f5;z-index:2}
 .b{font-size:10.5px;padding:1px 6px;border-radius:10px;background:#f1ede6;color:#57534e;font-weight:600}
 .b.full{background:#1f2328;color:#fff}
 .chip{display:inline-block;font-size:12px;font-weight:700;padding:2px 7px;border-radius:6px;margin:1px;border:1px solid rgba(0,0,0,.12)}
-.s-AM{background:var(--AM)}.s-PM{background:var(--PM)}.s-C{background:var(--C)}.s-C1{background:var(--C1)}.s-C2{background:var(--C2)}.s-OFF{background:var(--OFF)}
+.s-AM{background:var(--AM)}.s-PM{background:var(--PM)}.s-C{background:var(--C)}.s-C1{background:var(--C1)}.s-C2{background:var(--C2)}.s-OFF{background:var(--OFF)}.s-AM1{background:#ff66ff}.s-PM1{background:#f9cb9c}.s-PM2{background:#b6d7a8}
 td.rc{cursor:pointer;min-width:84px;height:44px;user-select:none}
 td.rc:hover{background:#fff7ed}
 .free{color:#c4bdb2;font-size:12px}
@@ -77,7 +77,7 @@ input[type=number]{width:80px}
 .mfoot .hint{width:100%;margin:2px 0 0}
 #copyMsg{font-size:13px;color:var(--ok)}
 .card.wide{grid-column:1/-1}
-th.prev{background:#f3f1ec}td.prev{min-width:84px;background:#f3f1ec}td.prev.s-AM{background:var(--AM)}td.prev.s-PM{background:var(--PM)}td.prev.s-C{background:var(--C)}td.prev.s-C1{background:var(--C1)}td.prev.s-C2{background:var(--C2)}td.prev.s-OFF{background:var(--OFF)}
+th.prev{background:#f3f1ec}td.prev{min-width:84px;background:#f3f1ec}td.prev.s-AM{background:var(--AM)}td.prev.s-PM{background:var(--PM)}td.prev.s-C{background:var(--C)}td.prev.s-C1{background:var(--C1)}td.prev.s-C2{background:var(--C2)}td.prev.s-OFF{background:var(--OFF)}td.prev.s-AM1{background:#ff66ff}td.prev.s-PM1{background:#f9cb9c}td.prev.s-PM2{background:#b6d7a8}
 td.prev select{border:0;background:transparent;font-weight:700;width:100%;text-align:center;text-align-last:center;cursor:pointer}
 table.pd{min-width:640px}
 table.pd td,table.pd th{padding:4px}
@@ -161,10 +161,12 @@ table.pd td,table.pd th{padding:4px}
 </div>
 
 <script>
-const SH=['AM','C','C1','C2','PM','OFF'];
-const TIMES={AM:'8h–16h30',C:'9h–21h',C1:'10h–22h',C2:'11h–23h',PM:'14h30–23h30',OFF:'Nghỉ'};
-const COLORS={AM:'#ffffff',C:'#3fd13f',C1:'#3ad7ea',C2:'#f7943a',PM:'#d5dae1',OFF:'#fff23a'};
-const isM=[1,1,1,1,0,0], isE=[0,1,1,1,1,0], isF=[0,1,1,1,0,0], GRP=[0,1,1,1,2,-1], GRPN=['AM','Full','PM'];
+const SH=['AM','C','C1','C2','PM','OFF','AM1','PM1','PM2'];
+const SHD=['AM','AM1','C','C1','C2','PM1','PM','PM2','OFF'];
+const AMG=v=>v==='AM'||v==='AM1', PMG=v=>v==='PM'||v==='PM1'||v==='PM2', LATE=v=>v==='PM'||v==='PM2'||v==='C2';
+const TIMES={AM:'8h–16h30',C:'9h–21h',C1:'10h–22h',C2:'11h–23h',PM:'14h30–23h30',OFF:'Nghỉ',AM1:'9h–17h30',PM1:'14h–22h30',PM2:'15h–23h30'};
+const COLORS={AM:'#ffffff',C:'#3fd13f',C1:'#3ad7ea',C2:'#f7943a',PM:'#d5dae1',OFF:'#fff23a',AM1:'#ff66ff',PM1:'#f9cb9c',PM2:'#b6d7a8'};
+const isM=[1,1,1,1,0,0,1,0,0], isE=[0,1,1,1,1,0,0,1,1], isF=[0,1,1,1,0,0,0,0,0], GRP=[0,1,1,1,2,-1,0,2,2], GRPN=['AM','Full','PM'];
 const SK=[['nuong','Nướng'],['cat','Cắt'],['dapde','Đập đế'],['lambanh','Làm bánh']];
 const ALL=SK.map(s=>s[0]);
 const DN=['MON','TUE','WED','THU','FRI','SAT','SUN'], DV=['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7','CN'];
@@ -203,7 +205,7 @@ const CODES={'Nguyễn Thị Thùy':'PZNT0212','Trần Thị Tuyết Trinh':'PZN
 function regFrom(staff){const r={};staff.forEach(p=>{r[p.id]=D7.map(d=>p.fixed[d]?[p.fixed[d]]:[])});return r}
 function defaultSettings(){return{
   amMin:4,amMax:5,
-  perDay:D7.map(d=>({C:d===6?0:1,C1:2,C2:d===6?3:2,PM:4,maxOff:[2,4,6].includes(d)?2:'',addC:d===6?1:0})),
+  perDay:D7.map(d=>({C:d===6?0:1,C1:2,C2:d===6?3:2,PM:4,AM1:0,PM1:0,PM2:0,maxOff:[2,4,6].includes(d)?2:'',addC:d===6?1:0})),
   fullMin:2,fullMax:3,minM:9,minE:9,offWeek:1,
   sk:{nuong:1,cat:1,dapde:1,lambanh:1},clopen:true}}
 function defaultExtras(){return[
@@ -218,6 +220,7 @@ let state=load()||defaultState();
   const DS=defaultSettings();
   state.settings={...DS,...(state.settings||{})};
   if(!Array.isArray(state.settings.perDay)||state.settings.perDay.length!==7)state.settings.perDay=DS.perDay;
+  state.settings.perDay.forEach(p=>{['AM1','PM1','PM2'].forEach(k=>{if(p[k]===undefined)p[k]=0})});
   state.settings.perDay.forEach((p,d)=>{if(p.addC===undefined){p.addC=d===6?1:0;if(d===6&&+p.C===1&&+p.C1===1&&+p.C2===3){p.C=0;p.C1=2}}});
   state.settings.sk={...DS.sk,...(state.settings.sk||{})};
   ['tAM','tC','tC1','tC2','tPM'].forEach(k=>delete state.settings[k]);
@@ -245,7 +248,7 @@ function headRow(extra){return `<thead><tr><th class="name">Nhân viên</th>${D7
 function offTarget(p){let f=0;D7.forEach(d=>{const r=state.reg[p.id][d];if(r.length===1&&r[0]==='OFF')f++});return Math.max(state.settings.offWeek,f)}
 function extraMorning(d){return state.extras.filter(e=>{const t=(e.days[d]||'').trim();return e.morning&&t&&!/^off$/i.test(t)}).length}
 function coverOff(d){return state.extras.some(e=>e.cover&&/^off$/i.test((e.days[d]||'').trim()))}
-function effPD(d){const p=state.settings.perDay[d],add=coverOff(d)?(+p.addC||0):0;const C=(+p.C||0)+add,C1=+p.C1||0,C2=+p.C2||0;return{C,C1,C2,PM:+p.PM||0,F:C+C1+C2,mo:num(p.maxOff),add}}
+function effPD(d){const p=state.settings.perDay[d],add=coverOff(d)?(+p.addC||0):0;const C=(+p.C||0)+add,C1=+p.C1||0,C2=+p.C2||0;return{C,C1,C2,PM:+p.PM||0,AM1:+p.AM1||0,PM1:+p.PM1||0,PM2:+p.PM2||0,F:C+C1+C2,mo:num(p.maxOff),add}}
 function fullTarget(d){return effPD(d).F}
 
 /* ---------- RENDER ---------- */
@@ -260,26 +263,27 @@ function render(){
   if(tab==='set')renderSettings();
 }
 function renderReg(){
-  $('#brushes').innerHTML=[...SH,'CLR'].map(b=>`<button class="brush ${b===brush?'on':''} ${b!=='CLR'?'s-'+b:''}" data-b="${b}">${b==='CLR'?'Xoá ô':b}</button>`).join('');
+  $('#brushes').innerHTML=[...SHD,'CLR'].map(b=>`<button class="brush ${b===brush?'on':''} ${b!=='CLR'?'s-'+b:''}" data-b="${b}">${b==='CLR'?'Xoá ô':b}</button>`).join('');
   let h=`<thead><tr><th class="name">Nhân viên</th><th class="prev">CN tuần trước<small>${dayDate(-1)}</small></th>${D7.map(d=>`<th>${DV[d]}<small>${dayDate(d)}</small></th>`).join('')}</tr></thead>`;
-  h+='<tbody>'+state.staff.map(p=>{const pv=state.prevSun[p.id]||'';return `<tr><td class="name">${esc(p.name)}<div class="sk">${skBadges(p)}</div></td><td class="prev ${pv?'s-'+pv:''}"><select class="prevsun" data-id="${p.id}"><option value="">—</option>${SH.map(o=>`<option${o===pv?' selected':''}>${o}</option>`).join('')}</select></td>${D7.map(d=>{const r=state.reg[p.id][d];
-    return `<td class="rc" data-id="${p.id}" data-d="${d}">${r.length?SH.filter(s=>r.includes(s)).map(chip).join(''):'<span class="free">tự do</span>'}</td>`}).join('')}</tr>`}).join('')+'</tbody>';
+  h+='<tbody>'+state.staff.map(p=>{const pv=state.prevSun[p.id]||'';return `<tr><td class="name">${esc(p.name)}<div class="sk">${skBadges(p)}</div></td><td class="prev ${pv?'s-'+pv:''}"><select class="prevsun" data-id="${p.id}"><option value="">—</option>${SHD.map(o=>`<option${o===pv?' selected':''}>${o}</option>`).join('')}</select></td>${D7.map(d=>{const r=state.reg[p.id][d];
+    return `<td class="rc" data-id="${p.id}" data-d="${d}">${r.length?SHD.filter(s=>r.includes(s)).map(chip).join(''):'<span class="free">tự do</span>'}</td>`}).join('')}</tr>`}).join('')+'</tbody>';
   const offC=D7.map(d=>state.staff.filter(p=>{const r=state.reg[p.id][d];return r.length===1&&r[0]==='OFF'}).length);
   h+=`<tfoot><tr><td class="name">Đã đăng ký OFF <small>(tối đa)</small></td><td></td>${offC.map((c,d)=>{const m=num(state.settings.perDay[d].maxOff);return `<td class="${m!=null&&c>m?'bad':''}">${c}${m!=null?` <small style="color:#6b7280">/ ${m}</small>`:''}</td>`}).join('')}</tr></tfoot>`;
   $('#regTable').innerHTML=h;
-  $('#legend').innerHTML=SH.filter(s=>s!=='OFF').map(s=>`<span>${chip(s)} ${TIMES[s]}</span>`).join('')+`<span>${chip('OFF')} Nghỉ</span>`;
+  $('#legend').innerHTML=SHD.filter(s=>s!=='OFF').map(s=>`<span>${chip(s)} ${TIMES[s]}</span>`).join('')+`<span>${chip('OFF')} Nghỉ</span>`;
 }
 function analyze(){
   const s=state.settings,days=[],warn=[],person={};
   const sepStaff=state.staff.filter(p=>p.sep);
   D7.forEach(d=>{
-    const pd=effPD(d),cnt={AM:0,C:0,C1:0,C2:0,PM:0,OFF:0},sm={},se={};ALL.forEach(k=>{sm[k]=0;se[k]=0});
+    const pd=effPD(d),cnt={AM:0,C:0,C1:0,C2:0,PM:0,OFF:0,AM1:0,PM1:0,PM2:0},sm={},se={};ALL.forEach(k=>{sm[k]=0;se[k]=0});
     state.staff.forEach(p=>{const v=state.result[p.id][d];cnt[v]++;const i=SH.indexOf(v);p.skills.forEach(k=>{if(isM[i])sm[k]++;if(isE[i])se[k]++})});
-    const on={AM:[0,0],PM:[0,0]};state.staff.forEach(p=>{const v=state.result[p.id][d];if(on[v])on[v][p.senior?0:1]++});
-    const ex=extraMorning(d),morning=cnt.AM+cnt.C+cnt.C1+cnt.C2+ex,evening=cnt.PM+cnt.C+cnt.C1+cnt.C2,full=cnt.C+cnt.C1+cnt.C2;
+    const on={AM:[0,0],PM:[0,0]};state.staff.forEach(p=>{const v=state.result[p.id][d],k=AMG(v)?'AM':PMG(v)?'PM':null;if(k)on[k][p.senior?0:1]++});
+    const amG=cnt.AM+cnt.AM1,pmG=cnt.PM+cnt.PM1+cnt.PM2;
+    const ex=extraMorning(d),morning=amG+cnt.C+cnt.C1+cnt.C2+ex,evening=pmG+cnt.C+cnt.C1+cnt.C2,full=cnt.C+cnt.C1+cnt.C2;
     const missM=SK.filter(k=>sm[k[0]]<(s.sk[k[0]]||0)).map(k=>k[1]),missE=SK.filter(k=>se[k[0]]<(s.sk[k[0]]||0)).map(k=>k[1]);
     const maxOff=pd.mo;
-    days.push({cnt,morning,evening,full,missM,missE,ex,maxOff,on});
+    days.push({cnt,morning,evening,full,missM,missE,ex,maxOff,on,amG,pmG});
     ['AM','PM'].forEach(k=>{const[o,nw]=on[k];if(Math.abs(o-nw)>(o+nw)%2)warn.push(['err',`${DV[d]}: ca ${k} có ${o} cũ / ${nw} mới (cần chia đều)`])});
     if(morning<s.minM)warn.push(['err',`${DV[d]}: ca sáng chỉ có ${morning}/${s.minM} người`]);
     if(evening<s.minE)warn.push(['err',`${DV[d]}: ca tối chỉ có ${evening}/${s.minE} người`]);
@@ -289,20 +293,20 @@ function analyze(){
     const g={0:[],1:[],2:[]};sepStaff.forEach(p=>{const k=GRP[SH.indexOf(state.result[p.id][d])];if(k>=0)g[k].push(p.name.split(' ').pop())});
     [0,1,2].forEach(k=>{if(g[k].length>1)warn.push(['err',`${DV[d]}: ${g[k].join(' & ')} cùng ca ${GRPN[k]} (nhóm nướng chính phải tách ca)`])});
     const fT=fullTarget(d);
-    if(cnt.AM<s.amMin||cnt.AM>s.amMax||full!==fT||cnt.PM!==pd.PM||cnt.C!==pd.C||cnt.C1!==pd.C1||cnt.C2!==pd.C2)
-      warn.push(['info',`${DV[d]}: ${cnt.AM} AM · ${full} Full (${cnt.C}C/${cnt.C1}C1/${cnt.C2}C2) · ${cnt.PM} PM — mục tiêu ${s.amMin}-${s.amMax} AM · ${fT} Full (${pd.C}/${pd.C1}/${pd.C2}${pd.add?', phụ off +'+pd.add+'C':''}) · ${pd.PM} PM`]);
+    if(amG<s.amMin||amG>s.amMax||full!==fT||pmG!==pd.PM||cnt.C!==pd.C||cnt.C1!==pd.C1||cnt.C2!==pd.C2)
+      warn.push(['info',`${DV[d]}: ${amG} AM (AM1: ${cnt.AM1}) · ${full} Full (${cnt.C}C/${cnt.C1}C1/${cnt.C2}C2) · ${pmG} PM (PM1: ${cnt.PM1}, PM2: ${cnt.PM2}) — mục tiêu ${s.amMin}-${s.amMax} AM · ${fT} Full (${pd.C}/${pd.C1}/${pd.C2}${pd.add?', phụ off +'+pd.add+'C':''}) · ${pd.PM} PM`]);
   });
   state.staff.forEach(p=>{
-    const r=state.result[p.id];const off=r.filter(v=>v==='OFF').length,full=r.filter(v=>isF[SH.indexOf(v)]).length,am=r.filter(v=>v==='AM').length;
+    const r=state.result[p.id];const off=r.filter(v=>v==='OFF').length,full=r.filter(v=>isF[SH.indexOf(v)]).length,am=r.filter(AMG).length;
     person[p.id]={off,full,am};const t=offTarget(p);
     if(off!==t)warn.push(['warn',`${p.name}: ${off} ngày off (mục tiêu ${t})`]);
     if(full<s.fullMin||full>s.fullMax)warn.push(['warn',`${p.name}: ${full} ca Full/tuần (yêu cầu ${s.fullMin}–${s.fullMax})`]);
     const a1=num(p.amMin),a2=num(p.amMax);
     if((a1!=null&&am<a1)||(a2!=null&&am>a2))warn.push(['warn',`${p.name}: ${am} ca AM/tuần (yêu cầu ${a1??0}–${a2??'∞'})`]);
-    const pv=state.prevSun[p.id];if((pv==='PM'||pv==='C2')&&r[0]==='AM')warn.push(['warn',`${p.name}: CN tuần trước ${pv} rồi AM Thứ 2`]);
+    const pv=state.prevSun[p.id];if(LATE(pv)&&r[0]==='AM')warn.push(['warn',`${p.name}: CN tuần trước ${pv} rồi AM Thứ 2`]);
     D7.forEach(d=>{
       const g=state.reg[p.id][d];if(g.length&&!g.includes(r[d]))warn.push(['warn',`${p.name} – ${DV[d]}: xếp ${r[d]}, khác đăng ký (${g.join('/')})`]);
-      if(s.clopen&&d<6&&(r[d]==='PM'||r[d]==='C2')&&r[d+1]==='AM')warn.push(['warn',`${p.name}: ${r[d]} ${DV[d]} rồi AM ${DV[d+1]} (đóng ca muộn → mở ca sớm)`]);
+      if(s.clopen&&d<6&&LATE(r[d])&&r[d+1]==='AM')warn.push(['warn',`${p.name}: ${r[d]} ${DV[d]} rồi AM ${DV[d+1]} (đóng ca muộn → mở ca sớm)`]);
     });
   });
   return{days,warn,person};
@@ -317,7 +321,7 @@ function renderRes(){
   state.staff.forEach(p=>{
     h+=`<tr><td class="name">${esc(p.name)}<div class="sk">${skBadges(p)}</div></td>`;
     D7.forEach(d=>{const v=state.result[p.id][d],lk=state.locks[p.id][d],g=state.reg[p.id][d],mm=g.length&&!g.includes(v);
-      h+=`<td class="cell s-${v} ${mm?'mism':''}" title="${esc(TIMES[v])}${mm?' · khác đăng ký':''}"><select data-id="${p.id}" data-d="${d}">${SH.map(o=>`<option${o===v?' selected':''}>${o}</option>`).join('')}</select>${lk?`<button class="lock" data-id="${p.id}" data-d="${d}" title="Bỏ khoá">🔒</button>`:''}</td>`});
+      h+=`<td class="cell s-${v} ${mm?'mism':''}" title="${esc(TIMES[v])}${mm?' · khác đăng ký':''}"><select data-id="${p.id}" data-d="${d}">${SHD.map(o=>`<option${o===v?' selected':''}>${o}</option>`).join('')}</select>${lk?`<button class="lock" data-id="${p.id}" data-d="${d}" title="Bỏ khoá">🔒</button>`:''}</td>`});
     const ps=A.person[p.id],a1=num(p.amMin),a2=num(p.amMax);
     h+=`<td class="${ps.off!==offTarget(p)?'bad':''}">${ps.off}</td><td class="${ps.full<s.fullMin||ps.full>s.fullMax?'bad':''}">${ps.full}</td><td class="${(a1!=null&&ps.am<a1)||(a2!=null&&ps.am>a2)?'bad':''}">${ps.am}</td></tr>`;
   });
@@ -325,9 +329,9 @@ function renderRes(){
   const row=(lab,f)=>`<tr><td class="name">${lab}</td>${A.days.map(f).join('')}<td></td><td></td><td></td></tr>`;
   const sm=t=>`<small style="color:#6b7280">${t}</small>`;
   const bal=x=>{const[o,nw]=x;return `<small class="${Math.abs(o-nw)>(o+nw)%2?'bad':''}" style="font-weight:600">(${o} cũ/${nw} mới)</small>`};
-  h+=row(`AM ${sm(`(${s.amMin}–${s.amMax})`)}`,x=>`<td class="${x.cnt.AM<s.amMin||x.cnt.AM>s.amMax?'bad':''}">${x.cnt.AM} ${bal(x.on.AM)}</td>`);
+  h+=row(`AM ${sm(`(AM+AM1, ${s.amMin}–${s.amMax})`)}`,x=>`<td class="${x.amG<s.amMin||x.amG>s.amMax?'bad':''}">${x.amG}${x.cnt.AM1?' '+sm(`(AM1: ${x.cnt.AM1})`):''} ${bal(x.on.AM)}</td>`);
   h+=row('Full C/C1/C2',(x,d)=>{const t=effPD(d);return `<td class="${x.full!==t.F?'bad':''}">${x.full}/${t.F} ${sm(`(${x.cnt.C}/${x.cnt.C1}/${x.cnt.C2})`)}</td>`});
-  h+=row('PM',x=>`<td>${x.cnt.PM} ${bal(x.on.PM)}</td>`);
+  h+=row(`PM ${sm('(PM+PM1+PM2)')}`,x=>`<td>${x.pmG}${x.cnt.PM1||x.cnt.PM2?' '+sm(`(PM1: ${x.cnt.PM1}, PM2: ${x.cnt.PM2})`):''} ${bal(x.on.PM)}</td>`);
   h+=row(`OFF ${sm('(tối đa)')}`,x=>`<td class="${x.maxOff!=null&&x.cnt.OFF>x.maxOff?'bad':''}">${x.cnt.OFF}${x.maxOff!=null?' '+sm('/ '+x.maxOff):''}</td>`);
   h+=row(`Ca sáng ${sm(`(≥${s.minM}, gồm phụ)`)}`,x=>`<td class="${x.morning<s.minM?'bad':'good'}">${x.morning}${x.ex?' '+sm(`(+${x.ex} phụ)`):''}${x.missM.length?`<span class="miss">thiếu ${x.missM.join(', ')}</span>`:''}</td>`);
   h+=row(`Ca tối ${sm(`(≥${s.minE})`)}`,x=>`<td class="${x.evening<s.minE?'bad':'good'}">${x.evening}${x.missE.length?`<span class="miss">thiếu ${x.missE.join(', ')}</span>`:''}</td>`);
@@ -345,7 +349,7 @@ function renderStaff(){
   h+=state.staff.map(p=>`<tr data-id="${p.id}"><td><input class="pc" value="${esc(p.code||'')}" style="width:96px"></td><td class="name"><input class="nm" value="${esc(p.name)}"></td>${SK.map(k=>`<td><input type="checkbox" class="skc" data-k="${k[0]}"${p.skills.includes(k[0])?' checked':''}></td>`).join('')}
     <td><input type="checkbox" class="pf" data-f="senior"${p.senior?' checked':''}></td><td><input type="checkbox" class="pf" data-f="sep"${p.sep?' checked':''}></td><td><input type="checkbox" class="pf" data-f="c2"${p.c2?' checked':''}></td>
     <td><input type="number" class="pn" data-f="amMin" min="0" max="7" value="${p.amMin??''}" style="width:56px"></td><td><input type="number" class="pn" data-f="amMax" min="0" max="7" value="${p.amMax??''}" style="width:56px"></td>
-    ${D7.map(d=>`<td><select class="fx" data-d="${d}"><option value="">—</option>${SH.map(o=>`<option${p.fixed[d]===o?' selected':''}>${o}</option>`).join('')}</select></td>`).join('')}<td><button class="del ghost small">Xoá</button></td></tr>`).join('')+'</tbody>';
+    ${D7.map(d=>`<td><select class="fx" data-d="${d}"><option value="">—</option>${SHD.map(o=>`<option${p.fixed[d]===o?' selected':''}>${o}</option>`).join('')}</select></td>`).join('')}<td><button class="del ghost small">Xoá</button></td></tr>`).join('')+'</tbody>';
   $('#staffTable').innerHTML=h;
 }
 function renderSettings(){
@@ -354,7 +358,7 @@ function renderSettings(){
   const pdRow=(f,lab)=>`<tr><td class="name">${lab}</td>${D7.map(d=>`<td><input type="number" min="0" max="15" data-pd="${d}" data-f="${f}" value="${s.perDay[d][f]??''}" style="width:60px"${f==='maxOff'?' placeholder="—"':''}></td>`).join('')}</tr>`;
   $('#settings').innerHTML=
    `<div class="card wide"><h4>Mục tiêu theo từng ngày</h4><div style="overflow-x:auto"><table class="pd"><thead><tr><th class="name"></th>${DV.map(d=>`<th>${d}</th>`).join('')}</tr></thead><tbody>
-     ${pdRow('C','C (9h–21h)')}${pdRow('C1','C1 (10h–22h)')}${pdRow('C2','C2 (11h–23h)')}${pdRow('PM','PM (14h30–23h30)')}${pdRow('addC','+ ca C khi phụ “bù” off <small>(vd. C. Đào)</small>')}${pdRow('maxOff','OFF tối đa <small>(trống = không giới hạn)</small>')}</tbody></table></div></div>`+
+     ${pdRow('C','C (9h–21h)')}${pdRow('C1','C1 (10h–22h)')}${pdRow('C2','C2 (11h–23h)')}${pdRow('AM1','AM1 (9h–17h30)')}${pdRow('PM1','PM1 (14h–22h30)')}${pdRow('PM2','PM2 (15h–23h30)')}${pdRow('PM','Tổng ca PM <small>(PM + PM1 + PM2)</small>')}${pdRow('addC','+ ca C khi phụ “bù” off <small>(vd. C. Đào)</small>')}${pdRow('maxOff','OFF tối đa <small>(trống = không giới hạn)</small>')}</tbody></table></div></div>`+
    `<div class="card"><h4>Số người mỗi ngày</h4>${n('amMin','AM tối thiểu',s.amMin)}${n('amMax','AM tối đa',s.amMax)}${n('minM','Ca sáng tối thiểu (AM + Full + phụ)',s.minM)}${n('minE','Ca tối tối thiểu (PM + Full)',s.minE)}</div>`+
    `<div class="card"><h4>Mỗi người / tuần</h4>${n('fullMin','Ca Full (C/C1/C2) tối thiểu',s.fullMin,7)}${n('fullMax','Ca Full (C/C1/C2) tối đa',s.fullMax,7)}${n('offWeek','Số ngày off',s.offWeek,7)}<p class="hint">Số AM/tuần riêng từng bạn, ưu tiên C2, nhóm nướng chính: chỉnh ở tab Nhân viên.</p></div>`+
    `<div class="card"><h4>Kỹ năng tối thiểu mỗi ca sáng / tối</h4>${SK.map(k=>n('sk.'+k[0],k[1],s.sk[k[0]])).join('')}</div>`+
@@ -369,25 +373,26 @@ function solve(keep){
     for(let d=0;d<D;d++){let set;
       if(keep&&state.result&&state.locks[p.id]?.[d]&&state.result[p.id])set=[state.result[p.id][d]];
       else{const r=state.reg[p.id]?.[d]||[];set=r.length?r:SH}
-      let idx=set.map(x=>SH.indexOf(x)).filter(x=>x>=0);if(!idx.length)idx=[0,1,2,3,4,5];
+      let idx=set.map(x=>SH.indexOf(x)).filter(x=>x>=0);if(!idx.length)idx=[0,1,2,3,4,5,6,7,8];
       allowL[i][d]=idx;allowM[i][d]=idx.reduce((m,x)=>m|(1<<x),0)}}
   const skm=st.map(p=>SK.reduce((m,k,j)=>p.skills.includes(k[0])?m|(1<<j):m,0));
-  const sen=st.map(p=>!!p.senior),prevLate=st.map(p=>{const v=state.prevSun[p.id];return v==='PM'||v==='C2'}),sep=st.map(p=>!!p.sep),c2p=st.map(p=>!!p.c2),aMin=st.map(p=>num(p.amMin)),aMax=st.map(p=>num(p.amMax));
+  const sen=st.map(p=>!!p.senior),prevLate=st.map(p=>LATE(state.prevSun[p.id])),sep=st.map(p=>!!p.sep),c2p=st.map(p=>!!p.c2),aMin=st.map(p=>num(p.amMin)),aMax=st.map(p=>num(p.amMax));
   const offT=st.map((p,i)=>{let f=0;for(let d=0;d<D;d++)if(allowL[i][d].length===1&&allowL[i][d][0]===5)f++;return Math.max(s.offWeek,f)});
   const PD=D7.map(effPD);
   const amAvg=Math.min(5,(s.amMin+s.amMax)/2*D/n);
   const exM=D7.map(extraMorning),skMin=SK.map(k=>s.sk[k[0]]||0);
-  const cnt=new Int32Array(6),sm=new Int32Array(4),se=new Int32Array(4),cg=new Int32Array(3),ao=new Int32Array(2),po=new Int32Array(2);
+  const cnt=new Int32Array(9),sm=new Int32Array(4),se=new Int32Array(4),cg=new Int32Array(3),ao=new Int32Array(2),po=new Int32Array(2);
   function dayCost(a,d){cnt.fill(0);sm.fill(0);se.fill(0);cg.fill(0);ao.fill(0);po.fill(0);
     for(let i=0;i<n;i++){const v=a[i][d],m=skm[i];cnt[v]++;
       if(isM[v])for(let k=0;k<4;k++)if(m>>k&1)sm[k]++;
       if(isE[v])for(let k=0;k<4;k++)if(m>>k&1)se[k]++;
       if(sep[i]&&v!==5)cg[GRP[v]]++;
-      if(v===0)ao[sen[i]?0:1]++;else if(v===4)po[sen[i]?0:1]++}
-    const pd=PD[d],mo=cnt[0]+cnt[1]+cnt[2]+cnt[3]+exM[d],ev=cnt[1]+cnt[2]+cnt[3]+cnt[4],fu=cnt[1]+cnt[2]+cnt[3];
+      if(v===0||v===6)ao[sen[i]?0:1]++;else if(v===4||v===7||v===8)po[sen[i]?0:1]++}
+    const pd=PD[d],amg=cnt[0]+cnt[6],pmg=cnt[4]+cnt[7]+cnt[8],mo=amg+cnt[1]+cnt[2]+cnt[3]+exM[d],ev=pmg+cnt[1]+cnt[2]+cnt[3],fu=cnt[1]+cnt[2]+cnt[3];
     let c=1000*Math.max(0,s.minM-mo)+1000*Math.max(0,s.minE-ev);
-    c+=15*(Math.max(0,s.amMin-cnt[0])+Math.max(0,cnt[0]-s.amMax));
-    c+=25*Math.abs(fu-pd.F)+12*Math.abs(cnt[4]-pd.PM)+6*(Math.abs(cnt[1]-pd.C)+Math.abs(cnt[2]-pd.C1)+Math.abs(cnt[3]-pd.C2));
+    c+=15*(Math.max(0,s.amMin-amg)+Math.max(0,amg-s.amMax));
+    for(const[k,t]of[[6,pd.AM1],[7,pd.PM1],[8,pd.PM2]])c+=40*Math.max(0,cnt[k]-t)+15*Math.max(0,t-cnt[k]);
+    c+=25*Math.abs(fu-pd.F)+12*Math.abs(pmg-pd.PM)+6*(Math.abs(cnt[1]-pd.C)+Math.abs(cnt[2]-pd.C1)+Math.abs(cnt[3]-pd.C2));
     if(pd.mo!=null)c+=800*Math.max(0,cnt[5]-pd.mo);
     c+=500*Math.max(0,Math.abs(ao[0]-ao[1])-((ao[0]+ao[1])%2))+500*Math.max(0,Math.abs(po[0]-po[1])-((po[0]+po[1])%2));
     for(let k=0;k<3;k++)if(cg[k]>1)c+=700*(cg[k]-1);
@@ -395,8 +400,8 @@ function solve(keep){
       if(skMin[k])c+=4*Math.max(0,skMin[k]+1-sm[k])+4*Math.max(0,skMin[k]+1-se[k])}
     return c}
   function perCost(a,i){const r=a[i];let off=0,fu=0,am=0,c=0;
-    for(let d=0;d<D;d++){const v=r[d];if(v===5)off++;else if(isF[v]){fu++;if(c2p[i]&&v!==3)c+=10}else if(v===0)am++;
-      if(s.clopen&&d<D-1&&(v===4||v===3)&&r[d+1]===0)c+=40}
+    for(let d=0;d<D;d++){const v=r[d];if(v===5)off++;else if(isF[v]){fu++;if(c2p[i]&&v!==3)c+=10}else if(v===0||v===6)am++;
+      if(s.clopen&&d<D-1&&(v===4||v===3||v===8)&&r[d+1]===0)c+=40}
     if(prevLate[i]&&r[0]===0)c+=150;
     c+=300*Math.abs(off-offT[i]);
     c+=200*(Math.max(0,s.fullMin-fu)+Math.max(0,fu-s.fullMax));
@@ -435,7 +440,7 @@ function runSolve(keep){
 
 /* ---------- EXPORT ---------- */
 function drawPNG(){
-  const st=state.staff,ex=state.extras,sc=2,pad=24,nameW=240,colW=96,rowH=28,titleH=46,headH=52,gap=14,legH=34;
+  const st=state.staff,ex=state.extras,sc=2,pad=24,nameW=240,colW=96,rowH=28,titleH=46,headH=52,gap=14,legH=62;
   const W=pad*2+nameW+colW*7,H=pad+titleH+headH+rowH*st.length+gap+rowH*ex.length+gap+legH+pad;
   const cv=document.createElement('canvas');cv.width=W*sc;cv.height=H*sc;const g=cv.getContext('2d');g.scale(sc,sc);
   const F='"Segoe UI",Roboto,Arial,sans-serif';g.fillStyle='#fff';g.fillRect(0,0,W,H);g.textBaseline='middle';
@@ -451,8 +456,8 @@ function drawPNG(){
   y+=gap;
   ex.forEach(e=>{box(x0,y,nameW,rowH,'#fff',e.name,{a:'left'});D7.forEach(d=>{const t=e.days[d]||'';box(x0+nameW+d*colW,y,colW,rowH,/^off$/i.test(t.trim())?COLORS.OFF:'#fff',t)});y+=rowH});
   y+=gap;let lx=x0;g.font=`600 12.5px ${F}`;g.textAlign='left';
-  ['C','C1','C2','AM','PM','OFF'].forEach(k=>{g.fillStyle=COLORS[k];g.fillRect(lx,y+8,18,18);g.strokeStyle='#8f969e';g.strokeRect(lx+.5,y+8.5,18,18);
-    const t=`${k}: ${TIMES[k]}`;g.fillStyle='#111';g.fillText(t,lx+24,y+17);lx+=24+g.measureText(t).width+20});
+  ['C','C1','C2','AM','AM1','PM1','PM','PM2','OFF'].forEach(k=>{
+    const t=`${k}: ${TIMES[k]}`,w=24+g.measureText(t).width+20;if(lx+w>W-pad){lx=x0;y+=28}g.fillStyle=COLORS[k];g.fillRect(lx,y+8,18,18);g.strokeStyle='#8f969e';g.strokeRect(lx+.5,y+8.5,18,18);g.fillStyle='#111';g.fillText(t,lx+24,y+17);lx+=w});
   return cv;
 }
 function showExport(){lastCanvas=drawPNG();const url=lastCanvas.toDataURL('image/png');$('#pngImg').src=url;const a=$('#dl');a.href=url;a.download=`lich-tuan-${state.weekStart}.png`;$('#copyMsg').textContent='';$('#modal').hidden=false}
